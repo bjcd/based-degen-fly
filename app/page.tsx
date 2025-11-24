@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 
@@ -17,6 +19,7 @@ type ActiveTraitEffects = {
   canDestroyObstacles: boolean
   swordCooldown: number // Added sword cooldown
   durabilityHits: number
+  hitsAbsorbed: number
   hasShield: boolean
   shieldActive: boolean
   shieldCooldown: number
@@ -26,7 +29,6 @@ type ActiveTraitEffects = {
   hasCompanion: boolean
   companionCooldown: number // Added companion cooldown
   hatSpawnBoost: number // Changed from coinSpawnBoost
-  hitsAbsorbed: number
   canShootLasers: boolean
   laserCooldown: number
   hasChainLightning: boolean
@@ -214,134 +216,36 @@ const traitDefinitions = [
 
 export default function CopterGame() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const gameRef = useRef<any>({}) // Declare gameRef
+  const gameLoopRef = useRef<any>(null) // Declare gameLoopRef
   const [gameState, setGameState] = useState<"menu" | "traits" | "playing" | "gameover">("menu")
   const [score, setScore] = useState(0)
   const [distance, setDistance] = useState(0)
   const [highScore, setHighScore] = useState(0)
   const [selectedTraits, setSelectedTraits] = useState<number[]>([])
+  const [canvasDimensions, setCanvasDimensions] = useState({ width: 800, height: 500 })
 
-  const gameLoopRef = useRef<number>()
-  const gameRef = useRef({
-    copter: { x: 100, y: 250, velocity: 0 },
-    obstacles: [] as { x: number; topHeight: number; gap: number; isSmall?: boolean }[],
-    hats: [] as { x: number; y: number; collected: boolean }[],
-    score: 0,
-    distance: 0,
-    frame: 0,
-    isPressed: false,
-    traitEffects: null as ActiveTraitEffects | null,
-    hitsRemaining: 1,
-    lastShieldRegen: 0,
-    lastSwordUse: 0, // Added sword cooldown tracking
-    lastLaserShot: 0,
-    lastLightningShot: 0,
-    lastCompanionCollect: 0, // Added companion cooldown tracking
-    lasersActive: [] as { x: number; y: number }[], // Track active lasers
-    lightningActive: [] as { x: number; y: number }[], // Track active lightning
-    companionTarget: null as { x: number; y: number } | null, // Track companion movement
-  })
+  useEffect(() => {
+    const updateCanvasSize = () => {
+      const viewportWidth = window.innerWidth
+      const viewportHeight = window.innerHeight
 
-  const calculateTraitEffects = (traitIds: number[]): ActiveTraitEffects => {
-    const effects: ActiveTraitEffects = {
-      speedMultiplier: 1.05, // Base speed increased by 5%
-      degenMultiplier: 1,
-      canDestroyObstacles: false,
-      swordCooldown: 600, // 10 seconds at 60fps
-      durabilityHits: 0, // Start at 0, will be additive
-      hasShield: false,
-      shieldActive: false,
-      shieldCooldown: 0,
-      accelerationBoost: 0,
-      gravityReduction: 0,
-      showPreview: false,
-      hasCompanion: false,
-      companionCooldown: 300,
-      hatSpawnBoost: 0,
-      hitsAbsorbed: 0,
-      canShootLasers: false,
-      laserCooldown: 600, // 10 seconds at 60fps
-      hasChainLightning: false,
-      lightningCooldown: 600, // 10 seconds at 60fps
-      hasLaserEyes: false,
-      hasLightningEyes: false,
-      rewardMultiplier: 1,
-      gravityModifier: 0,
-      hasHolographicDisplay: false,
+      if (viewportWidth < 768) {
+        // Mobile: use full viewport dimensions for immersive gameplay
+        const width = viewportWidth
+        const height = viewportHeight
+        setCanvasDimensions({ width, height })
+      } else {
+        // Desktop: use standard size with 16:10 aspect ratio
+        setCanvasDimensions({ width: 800, height: 500 })
+      }
     }
 
-    traitIds.forEach((id) => {
-      switch (id) {
-        case 0: // Sword
-          effects.canDestroyObstacles = true
-          effects.speedMultiplier += 0.1
-          effects.swordCooldown = 600 // 10 seconds at 60fps
-          break
-        case 1: // Gold Teeth
-          effects.degenMultiplier = 2
-          effects.speedMultiplier += 0.05
-          effects.rewardMultiplier = 1.5 // Increased reward multiplier
-          break
-        case 2: // Aura
-          effects.hasShield = true
-          effects.shieldActive = true
-          break
-        case 3: // Jetpack
-          effects.accelerationBoost += 0.3
-          effects.gravityReduction += 0.4 // Changed to -40% gravity
-          effects.gravityModifier = -0.4 // Changed to -40% gravity
-          break
-        case 4: // Holographic Display
-          effects.showPreview = true
-          effects.hasHolographicDisplay = true // Added
-          break
-        case 5: // Companion Orb
-          effects.hasCompanion = true
-          effects.hatSpawnBoost += 0.25
-          effects.companionCooldown = 300 // 5 seconds at 60fps
-          break
-        case 6: // Bronze Hands - 2 hits
-          effects.durabilityHits += 2 // Fixed to 2 hits
-          effects.speedMultiplier -= 0.05
-          break
-        case 7: // Gold Hands - 3 hits
-          effects.durabilityHits += 3 // Fixed to 3 hits
-          effects.speedMultiplier -= 0.1 // Changed to -10% speed
-          break
-        case 8: // Diamond Hands - 4 hits
-          effects.durabilityHits += 4 // Fixed to 4 hits
-          effects.speedMultiplier -= 0.15 // Changed to -15% speed
-          break
-        case 9: // Shoulder Pads - 4 hits
-          effects.hitsAbsorbed += 4
-          effects.speedMultiplier += 0.1
-          break
-        case 10: // Laser Eyes
-          effects.canShootLasers = true
-          effects.hasLaserEyes = true // Added
-          effects.laserCooldown = 600 // 10 seconds at 60fps
-          break
-        case 11: // Lightning Eyes
-          effects.hasChainLightning = true
-          effects.hasLightningEyes = true // Added
-          effects.lightningCooldown = 600 // 10 seconds at 60fps
-          effects.speedMultiplier += 0.2
-          break
-      }
-    })
+    updateCanvasSize()
+    window.addEventListener("resize", updateCanvasSize)
 
-    return effects
-  }
-
-  const toggleTrait = (traitId: number) => {
-    setSelectedTraits((prev) => {
-      if (prev.includes(traitId)) {
-        return prev.filter((id) => id !== traitId)
-      } else if (prev.length < 4) {
-        return [...prev, traitId]
-      }
-      return prev
-    })
-  }
+    return () => window.removeEventListener("resize", updateCanvasSize)
+  }, [])
 
   useEffect(() => {
     const savedHighScore = localStorage.getItem("copterHighScore")
@@ -357,27 +261,28 @@ export default function CopterGame() {
 
     const getGameConstants = () => {
       const effects = gameRef.current.traitEffects
-      const baseGravity = 0.5
-      const baseThrust = -8
-      const baseSpeed = 3
+      const baseGravity = 0.3 // Reduced from 0.5 for slower fall
+      const baseThrust = -6 // Reduced from -8 for gentler acceleration
+      const baseSpeed = 2.5 // Reduced from 3 for slower overall speed
+      const OBSTACLE_WIDTH = 60
 
       return {
         GRAVITY: effects ? baseGravity * (1 - effects.gravityModifier) : baseGravity,
         THRUST: effects ? baseThrust * (1 + effects.accelerationBoost) : baseThrust,
         OBSTACLE_SPEED: effects ? baseSpeed * effects.speedMultiplier : baseSpeed,
         COPTER_SIZE: 30,
-        OBSTACLE_WIDTH: 60,
+        OBSTACLE_WIDTH,
         GAP_SIZE: 180,
-        CANVAS_HEIGHT: 500,
-        CANVAS_WIDTH: 800,
+        CANVAS_HEIGHT: canvasDimensions.height,
+        CANVAS_WIDTH: canvasDimensions.width,
       }
     }
 
     const resetGame = () => {
       const traitEffects = calculateTraitEffects(selectedTraits)
-      const totalHits = traitEffects.durabilityHits + traitEffects.hitsAbsorbed + 1 // +1 for base hit
+      const totalHits = (traitEffects.durabilityHits || 0) + (traitEffects.hitsAbsorbed || 0) + 1 // +1 for base hit
       gameRef.current = {
-        copter: { x: 100, y: 250, velocity: 0 },
+        copter: { x: 100, y: canvasDimensions.height / 2, velocity: 0 },
         obstacles: [],
         hats: [],
         score: 0,
@@ -400,7 +305,9 @@ export default function CopterGame() {
     const drawCopter = () => {
       const { x, y } = gameRef.current.copter
       const effects = gameRef.current.traitEffects
+      const { CANVAS_HEIGHT, COPTER_SIZE } = getGameConstants()
 
+      // Fallback image if not found
       const characterImg = new Image()
       characterImg.src = "/images/screenshot-202025-11-24-20at-2013.png"
       ctx.drawImage(characterImg, x - 15, y - 15, 60, 60)
@@ -445,7 +352,7 @@ export default function CopterGame() {
 
         // If collecting a hat, show motion trail
         if (gameRef.current.companionTarget) {
-          const target = gameRef.current.companionTarget
+          const target = gameRef.current.companionTarget // Define target here
           ctx.strokeStyle = "rgba(168, 85, 247, 0.5)"
           ctx.lineWidth = 2
           ctx.setLineDash([5, 5])
@@ -491,11 +398,11 @@ export default function CopterGame() {
 
           const segments = 8
           for (let i = 1; i <= segments; i++) {
-            const segmentX = x + 20 + ((lightning.x - x - 20) * i) / segments
-            const segmentY = y + 10 + ((lightning.y - y - 10) * i) / segments + (Math.random() - 0.5) * 20
+            const segmentX = x + 20 + ((lightning.points[0].x - x - 20) * i) / segments
+            const segmentY = y + 10 + ((lightning.points[0].y - y - 10) * i) / segments + (Math.random() - 0.5) * 20
             ctx.lineTo(segmentX, segmentY)
           }
-          ctx.lineTo(lightning.x, lightning.y)
+          ctx.lineTo(lightning.points[0].x, lightning.points[0].y)
           ctx.stroke()
 
           // Inner glow
@@ -505,21 +412,23 @@ export default function CopterGame() {
         })
       }
 
+      // Jetpack flame
       if (effects?.gravityModifier < 0 && gameRef.current.isPressed) {
         const flameHeight = 15 + Math.random() * 5
-        const flameGradient = ctx.createLinearGradient(x + 15, y + 55, x + 15, y + 55 + flameHeight)
+        const flameGradient = ctx.createLinearGradient(x + 15, y + 30, x + 15, y + 30 + flameHeight)
         flameGradient.addColorStop(0, "rgba(251, 146, 60, 0.9)")
         flameGradient.addColorStop(0.5, "rgba(234, 88, 12, 0.7)")
         flameGradient.addColorStop(1, "rgba(234, 88, 12, 0)")
 
         ctx.fillStyle = flameGradient
         ctx.beginPath()
-        ctx.moveTo(x + 10, y + 55)
-        ctx.lineTo(x + 15, y + 55 + flameHeight)
-        ctx.lineTo(x + 20, y + 55)
+        ctx.moveTo(x + 10, y + 30)
+        ctx.lineTo(x + 15, y + 30 + flameHeight)
+        ctx.lineTo(x + 20, y + 30)
         ctx.fill()
       }
 
+      // Sword indicator
       if (effects?.canDestroyObstacles) {
         const timeSinceLastSword = gameRef.current.frame - gameRef.current.lastSwordUse
         const swordReady = timeSinceLastSword >= effects.swordCooldown
@@ -560,58 +469,90 @@ export default function CopterGame() {
 
     const drawObstacles = () => {
       const { obstacles, traitEffects } = gameRef.current
+      const { CANVAS_HEIGHT } = getGameConstants()
 
       obstacles.forEach((obstacle) => {
-        // Top obstacle
-        ctx.fillStyle = obstacle.isSmall ? "rgba(134, 239, 172, 0.8)" : "rgba(120, 113, 108, 0.9)"
-        ctx.fillRect(obstacle.x, 0, 60, obstacle.topHeight)
-        ctx.strokeStyle = "rgba(68, 64, 60, 0.5)"
-        ctx.lineWidth = 2
-        ctx.strokeRect(obstacle.x, 0, 60, obstacle.topHeight)
+        if (obstacle.isSmall) {
+          // Small obstacle (30% chance) - a small wall in the middle
+          ctx.fillStyle = "rgba(120, 113, 108, 0.9)"
+          const wallHeight = 80
+          const wallY = obstacle.topHeight + (obstacle.gap - wallHeight) / 2
+          ctx.fillRect(obstacle.x, wallY, 60, wallHeight)
+          ctx.strokeStyle = "rgba(68, 64, 60, 0.5)"
+          ctx.lineWidth = 2
+          ctx.strokeRect(obstacle.x, wallY, 60, wallHeight)
+        } else {
+          // Normal obstacle - top and bottom walls with gap
+          ctx.fillStyle = "rgba(120, 113, 108, 0.9)"
+          ctx.fillRect(obstacle.x, 0, 60, obstacle.topHeight)
+          ctx.strokeStyle = "rgba(68, 64, 60, 0.5)"
+          ctx.lineWidth = 2
+          ctx.strokeRect(obstacle.x, 0, 60, obstacle.topHeight)
 
-        // Bottom obstacle
-        ctx.fillStyle = obstacle.isSmall ? "rgba(134, 239, 172, 0.8)" : "rgba(120, 113, 108, 0.9)"
-        ctx.fillRect(obstacle.x, obstacle.topHeight + obstacle.gap, 60, 500 - obstacle.topHeight - obstacle.gap)
-        ctx.strokeStyle = "rgba(68, 64, 60, 0.5)"
-        ctx.lineWidth = 2
-        ctx.strokeRect(obstacle.x, obstacle.topHeight + obstacle.gap, 60, 500 - obstacle.topHeight - obstacle.gap)
+          ctx.fillStyle = "rgba(120, 113, 108, 0.9)"
+          ctx.fillRect(
+            obstacle.x,
+            obstacle.topHeight + obstacle.gap,
+            60,
+            CANVAS_HEIGHT - obstacle.topHeight - obstacle.gap,
+          )
+          ctx.strokeStyle = "rgba(68, 64, 60, 0.5)"
+          ctx.lineWidth = 2
+          ctx.strokeRect(
+            obstacle.x,
+            obstacle.topHeight + obstacle.gap,
+            60,
+            CANVAS_HEIGHT - obstacle.topHeight - obstacle.gap,
+          )
+        }
       })
 
       if (traitEffects?.hasHolographicDisplay && obstacles.length > 0) {
-        const nextObstacles = obstacles.filter((obs) => obs.x > 600).slice(0, 2)
+        const { CANVAS_WIDTH } = getGameConstants()
+        const nextObstacles = obstacles.filter((obs) => obs.x > CANVAS_WIDTH * 0.75).slice(0, 2)
 
         nextObstacles.forEach((obstacle) => {
-          const previewX = 650 + (obstacle.x - 600) * 0.3
+          const previewX = CANVAS_WIDTH * 0.8 + (obstacle.x - CANVAS_WIDTH * 0.75) * 0.3
           const scale = 0.3
 
           ctx.fillStyle = "rgba(56, 189, 248, 0.3)"
-          ctx.fillRect(
-            previewX,
-            obstacle.topHeight * scale,
-            60 * scale,
-            (500 - obstacle.topHeight - obstacle.gap) * scale * 0.2,
-          )
-          ctx.fillRect(
-            previewX,
-            (obstacle.topHeight + obstacle.gap) * scale,
-            60 * scale,
-            (500 - obstacle.topHeight - obstacle.gap) * scale,
-          )
 
-          ctx.strokeStyle = "rgba(56, 189, 248, 0.6)"
-          ctx.lineWidth = 1
-          ctx.strokeRect(
-            previewX,
-            obstacle.topHeight * scale,
-            60 * scale,
-            (500 - obstacle.topHeight - obstacle.gap) * scale * 0.2,
-          )
-          ctx.strokeRect(
-            previewX,
-            (obstacle.topHeight + obstacle.gap) * scale,
-            60 * scale,
-            (500 - obstacle.topHeight - obstacle.gap) * scale,
-          )
+          if (obstacle.isSmall) {
+            const wallHeight = 80
+            const wallY = obstacle.topHeight + (obstacle.gap - wallHeight) / 2
+            ctx.fillRect(previewX, wallY * scale, 60 * scale, wallHeight * scale)
+            ctx.strokeStyle = "rgba(56, 189, 248, 0.6)"
+            ctx.lineWidth = 1
+            ctx.strokeRect(previewX, wallY * scale, 60 * scale, wallHeight * scale)
+          } else {
+            ctx.fillRect(
+              previewX,
+              obstacle.topHeight * scale,
+              60 * scale,
+              (CANVAS_HEIGHT - obstacle.topHeight - obstacle.gap) * scale * 0.2,
+            )
+            ctx.fillRect(
+              previewX,
+              (obstacle.topHeight + obstacle.gap) * scale,
+              60 * scale,
+              (CANVAS_HEIGHT - obstacle.topHeight - obstacle.gap) * scale,
+            )
+
+            ctx.strokeStyle = "rgba(56, 189, 248, 0.6)"
+            ctx.lineWidth = 1
+            ctx.strokeRect(
+              previewX,
+              obstacle.topHeight * scale,
+              60 * scale,
+              (CANVAS_HEIGHT - obstacle.topHeight - obstacle.gap) * scale * 0.2,
+            )
+            ctx.strokeRect(
+              previewX,
+              (obstacle.topHeight + obstacle.gap) * scale,
+              60 * scale,
+              (CANVAS_HEIGHT - obstacle.topHeight - obstacle.gap) * scale,
+            )
+          }
         })
       }
     }
@@ -629,12 +570,12 @@ export default function CopterGame() {
         ctx.lineWidth = 3
         ctx.beginPath()
         ctx.moveTo(copter.x + COPTER_SIZE, copter.y + 10)
-        ctx.lineTo(laser.targetX, laser.targetY)
+        ctx.lineTo(laser.x, laser.y)
         ctx.stroke()
 
         ctx.fillStyle = `rgba(239, 68, 68, ${alpha})`
         ctx.beginPath()
-        ctx.arc(laser.targetX, laser.targetY, 8, 0, Math.PI * 2)
+        ctx.arc(laser.x, laser.y, 8, 0, Math.PI * 2)
         ctx.fill()
       })
     }
@@ -678,60 +619,84 @@ export default function CopterGame() {
       }
     }
 
-    const checkCollision = () => {
+    const checkCollision = (): boolean => {
       const { copter, obstacles, traitEffects } = gameRef.current
       const { CANVAS_HEIGHT, COPTER_SIZE, OBSTACLE_WIDTH } = getGameConstants()
 
-      if (copter.y < 0 || copter.y + 20 > CANVAS_HEIGHT) {
+      // Check if copter is out of bounds vertically
+      if (copter.y < 0 || copter.y + COPTER_SIZE > CANVAS_HEIGHT) {
         return true
       }
 
-      for (let i = obstacles.length - 1; i >= 0; i--) {
+      for (let i = 0; i < obstacles.length; i++) {
         const obstacle = obstacles[i]
-        const isInObstacleX = copter.x + COPTER_SIZE > obstacle.x && copter.x < obstacle.x + OBSTACLE_WIDTH
 
-        if (isInObstacleX) {
-          const isHittingTop = copter.y < obstacle.topHeight
-          const isHittingBottom = copter.y + 20 > obstacle.topHeight + obstacle.gap
+        if (copter.x < obstacle.x + OBSTACLE_WIDTH && copter.x + COPTER_SIZE > obstacle.x) {
+          let collided = false
 
-          if (isHittingTop || isHittingBottom) {
-            // Sword destroys small obstacles
+          if (obstacle.isSmall) {
+            // For small obstacles, check if copter hits the middle wall
+            const wallHeight = 80
+            const wallY = obstacle.topHeight + (obstacle.gap - wallHeight) / 2
+            if (copter.y + COPTER_SIZE > wallY && copter.y < wallY + wallHeight) {
+              collided = true
+            }
+          } else {
+            // For normal obstacles, check top and bottom walls
+            if (copter.y < obstacle.topHeight || copter.y + COPTER_SIZE > obstacle.topHeight + obstacle.gap) {
+              collided = true
+            }
+          }
+
+          if (collided) {
+            // Check if Diamond Hands can pass through small obstacles
+            // Assuming Diamond Hands is trait ID 8
+            if (obstacle.isSmall && traitEffects?.durabilityHits && traitEffects.durabilityHits >= 4) {
+              continue // Pass through, no collision registered
+            }
+
+            // Sword destroys small obstacles (Trait ID 0)
             if (obstacle.isSmall && traitEffects?.canDestroyObstacles && selectedTraits.includes(0)) {
               const timeSinceLastSword = gameRef.current.frame - gameRef.current.lastSwordUse
               if (timeSinceLastSword >= traitEffects.swordCooldown) {
                 obstacles.splice(i, 1)
                 gameRef.current.lastSwordUse = gameRef.current.frame
-                continue
+                return false // Obstacle destroyed, continue game
               }
             }
 
-            // Diamond hands can pass through small obstacles without damage or points
-            if (obstacle.isSmall && selectedTraits.includes(8)) {
-              continue
-            }
-
-            // 1. Aura Shield (1 hit)
+            // Check shield (Aura - Trait ID 2)
             if (traitEffects?.hasShield && traitEffects.shieldActive) {
-              traitEffects.shieldActive = false
-              gameRef.current.lastShieldRegen = gameRef.current.frame
+              gameRef.current.traitEffects = { ...traitEffects, shieldActive: false } // Use shield, deactivate
+              gameRef.current.lastShieldRegen = gameRef.current.frame // Start regen timer
               gameRef.current.hitsRemaining--
-              return false // Hit absorbed, continue game
+              obstacles.splice(i, 1)
+              return false // Hit absorbed by shield, continue game
             }
 
-            // 2. Shoulder Pads (4 hits)
-            if (traitEffects?.hitsAbsorbed && traitEffects.hitsAbsorbed > 0) {
-              traitEffects.hitsAbsorbed--
-              gameRef.current.hitsRemaining--
-              return false // Hit absorbed, continue game
-            }
-
-            // 3. Bronze/Gold/Diamond Hands (2/3/4 hits)
+            // Check durability hits (Bronze/Gold/Diamond Hands - Traits 6, 7, 8)
             if (traitEffects?.durabilityHits && traitEffects.durabilityHits > 0) {
-              traitEffects.durabilityHits--
-              gameRef.current.hitsRemaining--
-              return false // Hit absorbed, continue game
+              gameRef.current.traitEffects = {
+                ...traitEffects,
+                durabilityHits: traitEffects.durabilityHits - 1,
+              }
+              gameRef.current.hitsRemaining = traitEffects.durabilityHits - 1
+              obstacles.splice(i, 1)
+              return false // Hit absorbed by hands, continue game
             }
 
+            // Check hits absorbed (Shoulder Pads - Trait ID 9)
+            if (traitEffects?.hitsAbsorbed && traitEffects.hitsAbsorbed > 0) {
+              gameRef.current.traitEffects = {
+                ...traitEffects,
+                hitsAbsorbed: traitEffects.hitsAbsorbed - 1,
+              }
+              gameRef.current.hitsRemaining = traitEffects.hitsAbsorbed - 1
+              obstacles.splice(i, 1)
+              return false // Hit absorbed by shoulder pads, continue game
+            }
+
+            // If no other protection, it's a direct hit leading to game over
             return true
           }
         }
@@ -751,7 +716,7 @@ export default function CopterGame() {
         const distance = Math.sqrt(dx * dx + dy * dy)
 
         if (distance < 25) {
-          gameRef.current.score += hatReward
+          gameRef.current.score += Math.round(hatReward) // Ensure score is integer
           hats.splice(i, 1)
           gameRef.current.companionTarget = null
         }
@@ -759,7 +724,7 @@ export default function CopterGame() {
 
       if (traitEffects?.hasCompanion && hats.length > 0) {
         const timeSinceLastCollect = gameRef.current.frame - gameRef.current.lastCompanionCollect
-        const companionCooldown = 5 * 60 // 5 seconds at 60fps
+        const companionCooldown = traitEffects.companionCooldown || 300 // Use actual cooldown from effects
 
         if (timeSinceLastCollect >= companionCooldown) {
           const closestHat = hats.reduce(
@@ -774,11 +739,12 @@ export default function CopterGame() {
 
           if (closestHat.hat && closestHat.dist < 300) {
             gameRef.current.companionTarget = closestHat.hat
-            gameRef.current.score += hatReward
+            gameRef.current.score += Math.round(hatReward)
             const hatIndex = hats.indexOf(closestHat.hat)
             if (hatIndex > -1) hats.splice(hatIndex, 1)
             gameRef.current.lastCompanionCollect = gameRef.current.frame
 
+            // Clear companion target after a short duration to simulate movement
             setTimeout(() => {
               gameRef.current.companionTarget = null
             }, 500)
@@ -791,61 +757,95 @@ export default function CopterGame() {
       if (gameState !== "playing") return
 
       const game = gameRef.current
-      const constants = getGameConstants()
+      const { GRAVITY, THRUST, OBSTACLE_SPEED, COPTER_SIZE, GAP_SIZE, CANVAS_HEIGHT, CANVAS_WIDTH } = getGameConstants()
       const effects = game.traitEffects
 
+      // Apply thrust if screen is touched/held
       if (game.isPressed) {
-        game.copter.velocity = constants.THRUST
+        game.copter.velocity = THRUST
       }
-      game.copter.velocity += constants.GRAVITY
+
+      // Apply gravity
+      game.copter.velocity += GRAVITY
       game.copter.y += game.copter.velocity
 
-      game.distance += constants.OBSTACLE_SPEED
+      // Constrain copter to canvas bounds
+      if (game.copter.y < 0) game.copter.y = 0
+      if (game.copter.y + COPTER_SIZE > CANVAS_HEIGHT) game.copter.y = CANVAS_HEIGHT - COPTER_SIZE
+
+      // Update distance and score
+      game.distance += OBSTACLE_SPEED
       const metersDistance = Math.floor(game.distance / 10)
       setDistance(metersDistance)
 
+      // Shield regeneration logic
       if (effects?.hasShield && !effects.shieldActive && game.frame - game.lastShieldRegen > 600) {
+        // 600 frames = 10 seconds at 60fps
         effects.shieldActive = true
       }
 
+      // Laser Eye logic
       if (effects?.hasLaserEyes && selectedTraits.includes(10)) {
         const timeSinceLastLaser = game.frame - game.lastLaserShot
-        const laserCooldown = 10 * 60 // 10 seconds
+        const laserCooldown = effects.laserCooldown || 600 // Default to 10 seconds
 
         if (timeSinceLastLaser >= laserCooldown && game.obstacles.length > 0) {
+          // Find the next obstacle in front of the copter
           const nextObstacle = game.obstacles.find((obs) => obs.x > game.copter.x)
           if (nextObstacle) {
-            game.lasersActive = [{ x: nextObstacle.x + 30, y: nextObstacle.topHeight + nextObstacle.gap / 2 }]
+            // Calculate target point for laser (center of the obstacle's gap)
+            const targetX = nextObstacle.x + 60 / 2
+            const targetY = nextObstacle.topHeight + nextObstacle.gap / 2
+
+            game.lasersActive = [{ x: targetX, y: targetY, frame: game.frame }]
+
+            // Remove laser effect after a short duration
             setTimeout(() => {
-              game.lasersActive = []
+              game.lasersActive = game.lasersActive.filter((l) => l.frame !== game.frame)
             }, 200)
 
+            // Remove the obstacle that was targeted by the laser
             const obstacleIndex = game.obstacles.indexOf(nextObstacle)
             if (obstacleIndex > -1) {
               game.obstacles.splice(obstacleIndex, 1)
             }
-            game.lastLaserShot = game.frame
+            game.lastLaserShot = game.frame // Reset laser cooldown timer
           }
         }
       }
 
+      // Lightning Eye logic
       if (effects?.hasLightningEyes && selectedTraits.includes(11)) {
         const timeSinceLastLightning = game.frame - game.lastLightningShot
-        const lightningCooldown = 10 * 60 // 10 seconds
+        const lightningCooldown = effects.lightningCooldown || 600 // Default to 10 seconds
 
         if (timeSinceLastLightning >= lightningCooldown && game.obstacles.length > 0) {
-          const visibleObstacles = game.obstacles.filter((obs) => obs.x > game.copter.x && obs.x < game.copter.x + 800)
+          // Find all obstacles currently visible on screen
+          const visibleObstacles = game.obstacles.filter(
+            (obs) => obs.x > game.copter.x && obs.x < game.copter.x + CANVAS_WIDTH,
+          )
 
           if (visibleObstacles.length > 0) {
-            game.lightningActive = visibleObstacles.map((obs) => ({
-              x: obs.x + 30,
-              y: obs.topHeight + obs.gap / 2,
-            }))
+            // Generate lightning path points targeting the center of visible obstacles
+            const lightningPoints = visibleObstacles.reduce((acc, obs) => {
+              acc.push({ x: obs.x + 60 / 2, y: obs.topHeight + obs.gap / 2 })
+              return acc
+            }, [])
 
+            // Add lightning effect
+            game.lightningActive = [
+              {
+                points: lightningPoints,
+                frame: game.frame,
+              },
+            ]
+
+            // Remove lightning effect after a short duration
             setTimeout(() => {
-              game.lightningActive = []
+              game.lightningActive = game.lightningActive.filter((l) => l.frame !== game.frame)
             }, 300)
 
+            // Remove all targeted obstacles
             visibleObstacles.forEach((obs) => {
               const obstacleIndex = game.obstacles.indexOf(obs)
               if (obstacleIndex > -1) {
@@ -853,140 +853,155 @@ export default function CopterGame() {
               }
             })
 
-            game.lastLightningShot = game.frame
+            game.lastLightningShot = game.frame // Reset lightning cooldown timer
           }
         }
       }
 
+      // Clean up old laser and lightning effects
       game.lasersActive = game.lasersActive.filter((laser) => game.frame - laser.frame <= 20)
       game.lightningActive = game.lightningActive.filter((lightning) => game.frame - lightning.frame <= 30)
 
-      // Generate obstacles
-      if (game.frame % 150 === 0) {
-        const topHeight = Math.random() * (constants.CANVAS_HEIGHT - constants.GAP_SIZE - 100) + 50
-        const isSmall = Math.random() < 0.3
+      // Generate obstacles and hats
+      if (game.frame % 120 === 0) {
+        // Spawn new obstacle every 2 seconds (120 frames at 60fps)
+        const topHeight = 50 + Math.random() * (CANVAS_HEIGHT - GAP_SIZE - 100)
+        const isSmall = Math.random() < 0.3 // 30% chance for small walls
         game.obstacles.push({
-          x: constants.CANVAS_WIDTH,
+          x: CANVAS_WIDTH,
           topHeight,
-          gap: constants.GAP_SIZE,
+          gap: GAP_SIZE,
           isSmall,
         })
+
+        // Hat spawning logic, adjusted for hatSpawnBoost
+        if (Math.random() < 0.1 + (effects?.hatSpawnBoost || 0)) {
+          game.hats.push({
+            x: CANVAS_WIDTH + 30, // Start slightly off-screen to the right
+            y: topHeight + GAP_SIZE / 2,
+            collected: false,
+          })
+        }
       }
 
-      const hatSpawnRate = effects?.hatSpawnBoost ? 200 - 200 * effects.hatSpawnBoost : 200
-      if (game.frame % Math.floor(hatSpawnRate) === 50) {
-        const hatY = Math.random() * (constants.CANVAS_HEIGHT - 100) + 50
-        game.hats.push({
-          x: constants.CANVAS_WIDTH,
-          y: hatY,
-          collected: false,
-        })
-      }
-
+      // Move obstacles and hats to the left
       game.obstacles = game.obstacles.filter((obstacle) => {
-        obstacle.x -= constants.OBSTACLE_SPEED
-        return obstacle.x > -constants.OBSTACLE_WIDTH
+        obstacle.x -= OBSTACLE_SPEED
+        return obstacle.x > -60 // Keep obstacles that are still on screen
       })
 
       game.hats = game.hats.filter((hat) => {
-        hat.x -= constants.OBSTACLE_SPEED
-        return hat.x > -30
+        hat.x -= OBSTACLE_SPEED
+        return hat.x > -30 // Keep hats that are still on screen
       })
 
-      checkHatCollection()
+      checkHatCollection() // Check if any hats were collected
 
       if (checkCollision()) {
+        // Check if the collision is with a laser or lightning effect
+        // This logic might need refinement if lasers/lightning can also cause collisions
+        // For now, assuming direct obstacle collision is the game over condition.
+
         setGameState("gameover")
         const finalScore = game.score + metersDistance
         if (finalScore > highScore) {
           setHighScore(finalScore)
           localStorage.setItem("copterHighScore", finalScore.toString())
         }
-        return
+        return // Stop the game loop
       }
 
-      game.frame++
+      game.frame++ // Increment frame counter
 
+      // Drawing the game scene
       drawBackground()
       drawObstacles()
       drawHats()
       drawCopter()
+      drawLasers()
+      drawLightning()
 
+      // Display score and distance
       ctx.fillStyle = "rgba(30, 41, 59, 0.9)"
       ctx.font = "bold 20px monospace"
       ctx.fillText(`Distance: ${metersDistance}m`, 20, 35)
       ctx.fillText(`$DEGEN: ${game.score}`, 20, 60)
 
+      // Display trait-related UI elements
       let yOffset = 85
+      const currentEffects = gameRef.current.traitEffects // Re-fetch for current state
 
-      if (effects && effects.durabilityHits >= 1) {
-        ctx.fillText(`Hits: ${game.hitsRemaining}`, 20, yOffset)
+      // Hits Remaining UI
+      if (currentEffects && (currentEffects.durabilityHits > 0 || currentEffects.hitsAbsorbed > 0)) {
+        ctx.fillStyle = "rgba(249, 115, 22, 0.9)" // Orange for hit points
+        ctx.fillText(`❤️ Hits: ${gameRef.current.hitsRemaining}`, 20, yOffset)
+        ctx.fillStyle = "rgba(30, 41, 59, 0.9)" // Reset color
         yOffset += 25
       }
 
-      if (effects?.hitsAbsorbed && selectedTraits.includes(9)) {
-        ctx.fillText(`Shoulder: ${effects.hitsAbsorbed}/4`, 20, yOffset)
+      // Shield UI
+      if (currentEffects?.hasShield) {
+        const shieldStatus = currentEffects.shieldActive ? "ACTIVE" : "RECHARGING"
+        const shieldColor = currentEffects.shieldActive ? "rgba(56, 189, 248, 0.9)" : "rgba(239, 68, 68, 0.9)"
+        ctx.fillStyle = shieldColor
+        ctx.fillText(`🛡️ Shield: ${shieldStatus}`, 20, yOffset)
+        ctx.fillStyle = "rgba(30, 41, 59, 0.9)" // Reset color
         yOffset += 25
       }
 
-      if (effects?.hasShield) {
-        const shieldStatus = effects.shieldActive ? "READY" : "RECHARGING"
-        ctx.fillStyle = effects.shieldActive ? "rgba(56, 189, 248, 0.9)" : "rgba(239, 68, 68, 0.9)"
-        ctx.fillText(`Shield: ${shieldStatus}`, 20, yOffset)
-        ctx.fillStyle = "rgba(30, 41, 59, 0.9)"
-        yOffset += 25
-      }
-
-      if (effects?.canDestroyObstacles && selectedTraits.includes(0)) {
+      // Sword Cooldown UI
+      if (currentEffects?.canDestroyObstacles && selectedTraits.includes(0)) {
         const timeSinceLastSword = game.frame - game.lastSwordUse
-        const swordCooldown = effects.swordCooldown
+        const swordCooldown = currentEffects.swordCooldown || 600
         const swordSecondsLeft = Math.max(0, Math.ceil((swordCooldown - timeSinceLastSword) / 60))
 
         if (swordSecondsLeft > 0) {
-          ctx.fillStyle = "rgba(239, 68, 68, 0.9)"
-          ctx.fillText(`Sword: ${swordSecondsLeft}s`, 20, yOffset)
-          ctx.fillStyle = "rgba(30, 41, 59, 0.9)"
+          ctx.fillStyle = "rgba(239, 68, 68, 0.9)" // Red for cooldown
+          ctx.fillText(`🗡️ Sword: ${swordSecondsLeft}s`, 20, yOffset)
+          ctx.fillStyle = "rgba(30, 41, 59, 0.9)" // Reset color
           yOffset += 25
         } else {
-          ctx.fillStyle = "rgba(34, 197, 94, 0.9)"
-          ctx.fillText(`Sword: READY`, 20, yOffset)
-          ctx.fillStyle = "rgba(30, 41, 59, 0.9)"
+          ctx.fillStyle = "rgba(34, 197, 94, 0.9)" // Green for ready
+          ctx.fillText(`🗡️ Sword: READY`, 20, yOffset)
+          ctx.fillStyle = "rgba(30, 41, 59, 0.9)" // Reset color
           yOffset += 25
         }
       }
 
-      if (effects?.hasLaserEyes && selectedTraits.includes(10)) {
+      // Laser Cooldown UI
+      if (currentEffects?.hasLaserEyes && selectedTraits.includes(10)) {
         const timeSinceLastLaser = game.frame - game.lastLaserShot
-        const laserCooldown = 10 * 60
+        const laserCooldown = currentEffects.laserCooldown || 600
         const laserSecondsLeft = Math.max(0, Math.ceil((laserCooldown - timeSinceLastLaser) / 60))
 
         if (laserSecondsLeft > 0) {
-          ctx.fillStyle = "rgba(239, 68, 68, 0.9)"
-          ctx.fillText(`Laser: ${laserSecondsLeft}s`, 20, yOffset)
-          ctx.fillStyle = "rgba(30, 41, 59, 0.9)"
+          ctx.fillStyle = "rgba(239, 68, 68, 0.9)" // Red for cooldown
+          ctx.fillText(`👁️ Laser: ${laserSecondsLeft}s`, 20, yOffset)
+          ctx.fillStyle = "rgba(30, 41, 59, 0.9)" // Reset color
           yOffset += 25
         } else {
-          ctx.fillStyle = "rgba(34, 197, 94, 0.9)"
-          ctx.fillText(`Laser: READY`, 20, yOffset)
-          ctx.fillStyle = "rgba(30, 41, 59, 0.9)"
+          ctx.fillStyle = "rgba(34, 197, 94, 0.9)" // Green for ready
+          ctx.fillText(`👁️ Laser: READY`, 20, yOffset)
+          ctx.fillStyle = "rgba(30, 41, 59, 0.9)" // Reset color
           yOffset += 25
         }
       }
 
-      if (effects?.hasLightningEyes && selectedTraits.includes(11)) {
+      // Lightning Cooldown UI
+      if (currentEffects?.hasLightningEyes && selectedTraits.includes(11)) {
         const timeSinceLastLightning = game.frame - game.lastLightningShot
-        const lightningCooldown = 10 * 60
+        const lightningCooldown = currentEffects.lightningCooldown || 600
         const lightningSecondsLeft = Math.max(0, Math.ceil((lightningCooldown - timeSinceLastLightning) / 60))
 
         if (lightningSecondsLeft > 0) {
-          ctx.fillStyle = "rgba(239, 68, 68, 0.9)"
-          ctx.fillText(`Lightning: ${lightningSecondsLeft}s`, 20, yOffset)
-          ctx.fillStyle = "rgba(30, 41, 59, 0.9)"
+          ctx.fillStyle = "rgba(239, 68, 68, 0.9)" // Red for cooldown
+          ctx.fillText(`⚡ Lightning: ${lightningSecondsLeft}s`, 20, yOffset)
+          ctx.fillStyle = "rgba(30, 41, 59, 0.9)" // Reset color
           yOffset += 25
         } else {
-          ctx.fillStyle = "rgba(34, 197, 94, 0.9)"
-          ctx.fillText(`Lightning: READY`, 20, yOffset)
-          ctx.fillStyle = "rgba(30, 41, 59, 0.9)"
+          ctx.fillStyle = "rgba(34, 197, 94, 0.9)" // Green for ready
+          ctx.fillText(`⚡ Lightning: READY`, 20, yOffset)
+          ctx.fillStyle = "rgba(30, 41, 59, 0.9)" // Reset color
           yOffset += 25
         }
       }
@@ -994,28 +1009,142 @@ export default function CopterGame() {
       gameLoopRef.current = requestAnimationFrame(gameLoop)
     }
 
+    // Start game loop if gameState is 'playing'
     if (gameState === "playing") {
-      resetGame()
+      resetGame() // Initialize game state and effects
       gameLoopRef.current = requestAnimationFrame(gameLoop)
     }
 
+    // Cleanup function to cancel animation frame when component unmounts or gameState changes
     return () => {
       if (gameLoopRef.current) {
         cancelAnimationFrame(gameLoopRef.current)
       }
     }
-  }, [gameState, highScore, selectedTraits])
+  }, [gameState, highScore, selectedTraits, canvasDimensions]) // Re-run effect if these dependencies change
 
-  const handlePointerDown = () => {
+  const toggleTrait = (traitId: number) => {
+    setSelectedTraits((prev) => {
+      if (prev.includes(traitId)) {
+        return prev.filter((id) => id !== traitId)
+      } else if (prev.length < 4) {
+        return [...prev, traitId]
+      }
+      return prev
+    })
+  }
+
+  // Refactored calculateTraitEffects to accept trait IDs and return ActiveTraitEffects
+  const calculateTraitEffects = (traitIds: number[]): ActiveTraitEffects => {
+    const effects: ActiveTraitEffects = {
+      speedMultiplier: 1.15, // Base speed increased
+      accelerationBoost: 0,
+      gravityModifier: 0,
+      hatSpawnBoost: 0,
+      degenMultiplier: 1,
+      hasShield: false,
+      canDestroyObstacles: false, // Renamed from hasSword for clarity
+      swordCooldown: 600, // Default 10 seconds
+      durabilityHits: 0,
+      hitsAbsorbed: 0,
+      hasLaserEyes: false,
+      laserCooldown: 600, // Default 10 seconds
+      hasLightningEyes: false,
+      lightningCooldown: 600, // Default 10 seconds
+      hasHolographicDisplay: false,
+      hasCompanion: false,
+      companionCooldown: 300, // Default 5 seconds
+      shieldActive: false, // Shield starts active if hasShield is true
+      shieldCooldown: 0,
+      showPreview: false, // Not directly used, but kept for potential future use
+      hasChainLightning: false, // Redundant with hasLightningEyes, can be removed
+      rewardMultiplier: 1,
+      gravityReduction: 0,
+    }
+
+    traitIds.forEach((id) => {
+      switch (id) {
+        case 0: // Sword
+          effects.canDestroyObstacles = true
+          effects.speedMultiplier += 0.1
+          effects.swordCooldown = 600 // 10 seconds at 60fps
+          break
+        case 1: // Gold Teeth
+          effects.degenMultiplier = 2
+          effects.speedMultiplier += 0.05
+          effects.rewardMultiplier = 1.5 // Increased reward multiplier
+          break
+        case 2: // Aura
+          effects.hasShield = true
+          effects.shieldActive = true // Shield starts active
+          break
+        case 3: // Jetpack
+          effects.accelerationBoost += 0.3
+          effects.gravityReduction += 0.4 // Changed to -40% gravity
+          effects.gravityModifier = -0.4 // Changed to -40% gravity
+          break
+        case 4: // Holographic Display
+          effects.showPreview = true
+          effects.hasHolographicDisplay = true
+          break
+        case 5: // Companion Orb
+          effects.hasCompanion = true
+          effects.hatSpawnBoost += 0.25
+          effects.companionCooldown = 300 // 5 seconds at 60fps
+          break
+        case 6: // Bronze Hands - 2 hits
+          effects.durabilityHits += 2
+          effects.speedMultiplier -= 0.05
+          break
+        case 7: // Gold Hands - 3 hits
+          effects.durabilityHits += 3
+          effects.speedMultiplier -= 0.1
+          break
+        case 8: // Diamond Hands - 4 hits
+          effects.durabilityHits += 4
+          effects.speedMultiplier -= 0.15
+          break
+        case 9: // Shoulder Pads - 4 hits
+          effects.hitsAbsorbed += 4
+          effects.speedMultiplier += 0.1
+          break
+        case 10: // Laser Eyes
+          effects.hasLaserEyes = true
+          effects.laserCooldown = 600 // 10 seconds at 60fps
+          break
+        case 11: // Lightning Eyes
+          effects.hasLightningEyes = true
+          effects.lightningCooldown = 600 // 10 seconds at 60fps
+          effects.speedMultiplier += 0.2
+          break
+      }
+    })
+
+    return effects
+  }
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    e.preventDefault()
     if (gameState === "playing") {
       gameRef.current.isPressed = true
     }
   }
 
-  const handlePointerUp = () => {
+  const handlePointerUp = (e: React.PointerEvent) => {
+    e.preventDefault()
     if (gameState === "playing") {
       gameRef.current.isPressed = false
     }
+  }
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    e.preventDefault()
+    gameRef.current.isPressed = true
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    e.preventDefault()
+    gameRef.current.isPressed = false
   }
 
   const startGame = () => {
@@ -1027,95 +1156,153 @@ export default function CopterGame() {
   const finalScore = score + distance
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-stone-900 p-4">
-      <div className="relative">
-        <canvas
-          ref={canvasRef}
-          width={800}
-          height={500}
-          className="rounded-lg border-4 border-purple-600 shadow-2xl"
-          onPointerDown={handlePointerDown}
-          onPointerUp={handlePointerUp}
-          onPointerLeave={handlePointerUp}
-        />
-
+    <div className="flex min-h-screen w-full items-center justify-center bg-gradient-to-b from-pink-200 to-pink-300 md:p-4">
+      <div className="flex w-full max-w-4xl flex-col items-center gap-4">
         {gameState === "menu" && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center rounded-lg bg-stone-900/95 backdrop-blur-sm">
-            <h1 className="mb-2 font-mono text-6xl font-bold text-purple-500">COPTER</h1>
-            <p className="mb-8 font-mono text-xl text-pink-400">Funky Cave Runner</p>
-            <div className="mb-8 text-center">
-              <p className="mb-4 font-mono text-lg text-stone-300">🚁 Touch and hold to fly up</p>
-              <p className="mb-4 font-mono text-lg text-stone-300">⬇️ Release to fall down</p>
-              <p className="mb-4 font-mono text-lg text-yellow-400">🎩 Collect hats for bonus points!</p>
-              <p className="font-mono text-lg text-stone-300">🎯 Avoid obstacles and go far!</p>
+          <div className="flex flex-col items-center gap-4 sm:gap-6 rounded-xl bg-white/90 p-4 sm:p-8 shadow-2xl backdrop-blur mx-4">
+            <h1 className="text-3xl sm:text-6xl font-bold text-purple-600 text-center">Flying Game</h1>
+            <p className="text-sm sm:text-lg text-gray-600 text-center max-w-md">
+              Fly through obstacles, collect hats, and rack up $DEGEN tokens!
+            </p>
+            <div className="flex flex-col gap-3 w-full sm:w-auto">
+              <Button
+                onClick={() => setGameState("traits")}
+                size="lg"
+                className="bg-purple-600 hover:bg-purple-700 text-white text-base sm:text-lg px-6 sm:px-8 py-4 sm:py-6 w-full sm:w-auto"
+              >
+                Start Game
+              </Button>
+              {highScore > 0 && (
+                <div className="text-center text-sm sm:text-lg text-gray-700">
+                  High Score: <span className="font-bold text-purple-600">{highScore} $DEGEN</span>
+                </div>
+              )}
             </div>
-            {highScore > 0 && <p className="mb-6 font-mono text-xl text-amber-400">High Score: {highScore}</p>}
-            <Button
-              size="lg"
-              onClick={() => setGameState("traits")}
-              className="bg-purple-600 font-mono text-lg hover:bg-purple-700"
-            >
-              SELECT TRAITS
-            </Button>
           </div>
         )}
 
         {gameState === "traits" && (
-          <div className="absolute inset-0 overflow-y-auto rounded-lg bg-stone-900/95 p-6 backdrop-blur-sm">
-            <h2 className="mb-2 text-center font-mono text-3xl font-bold text-purple-500">SELECT TRAITS</h2>
-            <p className="mb-6 text-center font-mono text-sm text-stone-400">
-              Choose up to 4 traits ({selectedTraits.length}/4 selected)
+          <div className="flex flex-col items-center gap-4 sm:gap-6 rounded-xl bg-white/90 p-3 sm:p-8 shadow-2xl backdrop-blur w-full max-w-3xl mx-4 max-h-screen overflow-y-auto">
+            <h2 className="text-xl sm:text-4xl font-bold text-purple-600">Select Traits (Max 4)</h2>
+            <p className="text-xs sm:text-base text-gray-600 text-center">
+              Choose up to 4 traits to customize your flying character
             </p>
-            <div className="mb-6 grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4 w-full">
               {TRAITS.filter((t) => t.unlocked).map((trait) => {
                 const isSelected = selectedTraits.includes(trait.id)
                 return (
                   <button
                     key={trait.id}
                     onClick={() => toggleTrait(trait.id)}
-                    className={`rounded-lg border-2 p-3 text-left transition-all ${
+                    disabled={!trait.unlocked}
+                    className={`flex flex-col items-center gap-1 sm:gap-2 rounded-lg border-2 p-2 sm:p-4 transition-all ${
                       isSelected
-                        ? "border-purple-500 bg-purple-900/50"
-                        : "border-stone-700 bg-stone-800/50 hover:border-stone-500"
+                        ? "border-purple-600 bg-purple-100 scale-95"
+                        : trait.unlocked
+                          ? "border-gray-300 bg-white hover:border-purple-400 hover:bg-purple-50"
+                          : "border-gray-200 bg-gray-100 opacity-50 cursor-not-allowed"
                     }`}
                   >
-                    <div className="mb-1 flex items-center gap-2">
-                      <span className="text-2xl">{trait.icon}</span>
-                      <span className="font-mono text-sm font-bold text-purple-300">{trait.name}</span>
+                    <span className="text-xl sm:text-3xl">{trait.icon}</span>
+                    <span className="text-xs sm:text-sm font-semibold text-center leading-tight">{trait.name}</span>
+                    <div className="text-[10px] sm:text-xs text-gray-600 text-center space-y-0.5">
+                      {trait.description.map((desc, i) => (
+                        <p key={i} className="leading-tight">
+                          {desc}
+                        </p>
+                      ))}
                     </div>
-                    {trait.description.map((desc, i) => (
-                      <p key={i} className="font-mono text-xs text-stone-400">
-                        • {desc}
-                      </p>
-                    ))}
+                    {!trait.unlocked && <span className="text-xs text-gray-400">🔒 Locked</span>}
                   </button>
                 )
               })}
             </div>
-            <div className="flex justify-center gap-4">
-              <Button onClick={() => setGameState("menu")} variant="outline" className="font-mono">
-                BACK
-              </Button>
-              <Button onClick={startGame} className="bg-purple-600 font-mono hover:bg-purple-700">
-                START GAME
-              </Button>
+            <div className="text-xs sm:text-base text-gray-600">Selected: {selectedTraits.length}/4 traits</div>
+            <Button
+              onClick={() => {
+                setGameState("playing")
+              }}
+              size="lg"
+              className="bg-purple-600 hover:bg-purple-700 text-white text-sm sm:text-lg px-4 sm:px-8 py-3 sm:py-6 w-full sm:w-auto"
+            >
+              Start Flying!
+            </Button>
+          </div>
+        )}
+
+        {gameState === "playing" && (
+          <div className="relative w-full h-screen md:h-auto md:flex md:flex-col md:items-center md:gap-4">
+            {/* HUD overlay positioned at top on mobile */}
+            <div className="absolute top-0 left-0 right-0 z-10 flex flex-wrap justify-center gap-2 rounded-b-lg md:rounded-lg bg-white/90 p-2 sm:p-4 shadow-lg backdrop-blur md:relative md:w-full">
+              <div className="text-xs sm:text-lg font-bold text-purple-600">Distance: {distance}m</div>
+              <div className="text-xs sm:text-lg font-bold text-green-600">$DEGEN: {score}</div>
+              {gameRef.current.traitEffects && (
+                <>
+                  {(gameRef.current.traitEffects.durabilityHits > 0 ||
+                    gameRef.current.traitEffects.hitsAbsorbed > 0) && (
+                    <div className="text-xs sm:text-base font-bold text-orange-600">
+                      ❤️ Hits: {gameRef.current.hitsRemaining}
+                    </div>
+                  )}
+                  {gameRef.current.traitEffects.hasShield && (
+                    <div className="text-xs sm:text-base font-bold text-blue-600">
+                      🛡️ {gameRef.current.traitEffects.shieldActive ? "Active" : "Recharging"}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
+            <canvas
+              ref={canvasRef}
+              width={canvasDimensions.width}
+              height={canvasDimensions.height}
+              onPointerDown={handlePointerDown}
+              onPointerUp={handlePointerUp}
+              onPointerLeave={handlePointerUp}
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
+              className="w-full h-full md:h-auto md:rounded-lg md:shadow-2xl cursor-pointer touch-none"
+            />
+            {/* Instruction text at bottom on mobile */}
+            <p className="absolute bottom-2 left-0 right-0 text-center text-[10px] sm:text-sm text-white md:text-gray-700 drop-shadow-lg md:drop-shadow-none md:relative">
+              Touch and hold to fly up, release to fall
+            </p>
           </div>
         )}
 
         {gameState === "gameover" && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center rounded-lg bg-stone-900/95 backdrop-blur-sm">
-            <h2 className="mb-4 font-mono text-5xl font-bold text-red-500">GAME OVER</h2>
-            <p className="mb-2 font-mono text-xl text-stone-200">Distance: {distance}m</p>
-            <p className="mb-2 font-mono text-xl text-yellow-400">Hat Bonus: {score} pts</p>
-            <p className="mb-4 font-mono text-2xl text-purple-400">Total: {finalScore}</p>
-            <p className="mb-8 font-mono text-xl text-amber-400">Best: {highScore}</p>
-            <div className="flex gap-4">
-              <Button onClick={() => setGameState("traits")} variant="outline" className="font-mono">
-                CHANGE TRAITS
+          <div className="flex flex-col items-center gap-3 sm:gap-6 rounded-xl bg-white/90 p-4 sm:p-8 shadow-2xl backdrop-blur mx-4">
+            <h2 className="text-2xl sm:text-5xl font-bold text-red-600">Game Over!</h2>
+            <div className="flex flex-col gap-2 text-center">
+              <p className="text-base sm:text-2xl text-gray-700">
+                Distance: <span className="font-bold text-purple-600">{distance}m</span>
+              </p>
+              <p className="text-base sm:text-2xl text-gray-700">
+                $DEGEN Earned: <span className="font-bold text-green-600">{score}</span>
+              </p>
+              <p className="text-sm sm:text-xl text-gray-700">
+                High Score: <span className="font-bold text-purple-600">{highScore} $DEGEN</span>
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+              <Button
+                onClick={() => {
+                  setGameState("playing")
+                }}
+                size="lg"
+                className="bg-purple-600 hover:bg-purple-700 text-white text-base sm:text-lg px-6 sm:px-8 py-4 sm:py-6 w-full sm:w-auto"
+              >
+                Play Again
               </Button>
-              <Button size="lg" onClick={startGame} className="bg-purple-600 font-mono text-lg hover:bg-purple-700">
-                TRY AGAIN
+              <Button
+                onClick={() => {
+                  setGameState("traits")
+                }}
+                size="lg"
+                variant="outline"
+                className="border-purple-600 text-purple-600 hover:bg-purple-50 text-base sm:text-lg px-6 sm:px-8 py-4 sm:py-6 w-full sm:w-auto"
+              >
+                Change Traits
               </Button>
             </div>
           </div>
