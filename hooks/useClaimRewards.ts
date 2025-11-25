@@ -11,7 +11,29 @@ export function useClaimRewards() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [transactionStartTime, setTransactionStartTime] = useState<number | null>(null)
 
-  const { writeContract, data: hash, isPending, error: writeError, reset: resetWrite } = useWriteContract()
+  const { 
+    writeContract, 
+    data: hash, 
+    isPending, 
+    error: writeError, 
+    reset: resetWrite,
+    status: writeStatus 
+  } = useWriteContract({
+    onSuccess: (hash) => {
+      console.log("✅ writeContract onSuccess callback - hash:", hash)
+      setTransactionStartTime(null)
+    },
+    onError: (error) => {
+      console.error("❌ writeContract onError callback:", error)
+      setTransactionStartTime(null)
+      setIsClaiming(false)
+      if (error.message?.includes("User rejected") || error.message?.includes("rejected")) {
+        setError("Transaction rejected")
+      } else {
+        setError(error.message || "Transaction failed")
+      }
+    },
+  })
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash,
   })
@@ -28,8 +50,15 @@ export function useClaimRewards() {
   useEffect(() => {
     if (isPending) {
       console.log("⏳ Transaction pending - wallet modal should be open")
+    } else if (transactionStartTime && !hash && !writeError) {
+      console.log("⚠️ isPending is false but no hash/error - wallet may have closed without response")
     }
-  }, [isPending])
+  }, [isPending, transactionStartTime, hash, writeError])
+
+  // Monitor writeStatus
+  useEffect(() => {
+    console.log("📊 writeContract status:", writeStatus, { isPending, hash: !!hash, error: !!writeError })
+  }, [writeStatus, isPending, hash, writeError])
 
   // Timeout detection: if transaction doesn't get submitted within 30 seconds
   useEffect(() => {
@@ -40,17 +69,27 @@ export function useClaimRewards() {
     const checkTimeout = setInterval(() => {
       if (!hash && !writeError && transactionStartTime) {
         const elapsed = Date.now() - transactionStartTime
-        if (elapsed > 30000) {
-          console.warn("⚠️ Transaction timeout - no hash or error after 30s")
-          setError("Transaction timeout - the wallet modal may not have opened. Please try again or check your wallet connection.")
+        // Check if isPending changed to false without getting a hash/error
+        if (!isPending && elapsed > 5000) {
+          console.warn("⚠️ Wallet closed without response - isPending is false but no hash/error after 5s")
+          setError("Transaction was not submitted. The wallet may have closed without confirming. Please try again.")
           setIsClaiming(false)
           setTransactionStartTime(null)
+          clearInterval(checkTimeout)
+        } else if (elapsed > 30000) {
+          console.warn("⚠️ Transaction timeout - no hash or error after 30s")
+          setError("Transaction timeout - the wallet modal may not have opened or the transaction was not submitted. Please try again or check your wallet connection.")
+          setIsClaiming(false)
+          setTransactionStartTime(null)
+          clearInterval(checkTimeout)
         }
+      } else {
+        clearInterval(checkTimeout)
       }
     }, 1000) // Check every second
 
     return () => clearInterval(checkTimeout)
-  }, [transactionStartTime, hash, writeError])
+  }, [transactionStartTime, hash, writeError, isPending])
 
   // Handle transaction success
   useEffect(() => {
