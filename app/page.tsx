@@ -106,10 +106,20 @@ export default function CopterGame() {
 
   const getGameConstants = (): GameConstants => {
     const effects = gameRef.current?.traitEffects
+    const currentDistance = gameRef.current?.distance || 0
+    const metersDistance = currentDistance / 10 // Convert pixels to meters
+    
+    // Difficulty scaling: Every 500m, speed increases by 10%
+    // At 0m: 1.0x, at 500m: 1.1x, at 1000m: 1.2x, at 5000m: 2.0x
+    const difficultyMultiplier = 1 + (metersDistance / 500) * 0.1
+    
+    const baseSpeed = effects ? BASE_SPEED * effects.speedMultiplier : BASE_SPEED
+    const finalSpeed = baseSpeed * difficultyMultiplier
+    
     return {
       GRAVITY: effects ? BASE_GRAVITY * (1 - effects.gravityModifier) : BASE_GRAVITY,
       THRUST: effects ? BASE_THRUST * (1 + effects.accelerationBoost) : BASE_THRUST,
-      OBSTACLE_SPEED: effects ? BASE_SPEED * effects.speedMultiplier : BASE_SPEED,
+      OBSTACLE_SPEED: finalSpeed,
       COPTER_SIZE,
       OBSTACLE_WIDTH,
       GAP_SIZE,

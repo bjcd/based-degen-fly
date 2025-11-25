@@ -13,6 +13,11 @@ export function Menu({ highScore, onStart }: MenuProps) {
 
   return (
     <div className="flex flex-col items-center gap-4 sm:gap-6 rounded-xl bg-white/90 p-4 sm:p-8 shadow-2xl backdrop-blur mx-4">
+      <img
+        src="/logo.png"
+        alt="Based Degen Sky Logo"
+        className="w-32 sm:w-48 h-auto mb-2"
+      />
       <h1 className="text-3xl sm:text-6xl font-bold text-purple-600 text-center">Based Degen Sky</h1>
       <p className="text-sm sm:text-lg text-gray-600 text-center max-w-md">
         <strong>Fly through obstacles, collect hats, and rack up DEGEN tokens!</strong> Real DEGEN rewards requires a Based Degen NFT. Mint one or buy on secondary market.

@@ -11,7 +11,7 @@ export const TRAITS: Trait[] = [
   {
     id: 1,
     name: "Gold Teeth",
-    description: ["2x $DEGEN rewards", "+5% speed"],
+    description: ["Can take 2 hits", "+20% speed"],
     icon: "🦷",
     unlocked: true,
   },
@@ -53,7 +53,7 @@ export const TRAITS: Trait[] = [
   {
     id: 7,
     name: "Gold Hands",
-    description: ["Can take 3 hits", "-10% speed"],
+    description: ["2x $DEGEN rewards", "-10% speed"],
     icon: "🥇",
     unlocked: true,
   },
@@ -130,9 +130,8 @@ export function calculateTraitEffects(traitIds: number[]): ActiveTraitEffects {
         effects.swordCooldown = SWORD_COOLDOWN
         break
       case 1: // Gold Teeth
-        effects.degenMultiplier = 2
-        effects.speedMultiplier += 0.05
-        effects.rewardMultiplier = 1.5
+        effects.durabilityHits += 2
+        effects.speedMultiplier += 0.2
         break
       case 2: // Aura
         effects.hasShield = true
@@ -156,9 +155,10 @@ export function calculateTraitEffects(traitIds: number[]): ActiveTraitEffects {
         effects.durabilityHits += 2
         effects.speedMultiplier -= 0.05
         break
-      case 7: // Gold Hands - 3 hits
-        effects.durabilityHits += 3
+      case 7: // Gold Hands
+        effects.degenMultiplier = 2
         effects.speedMultiplier -= 0.1
+        effects.rewardMultiplier = 1.5
         break
       case 8: // Diamond Hands - 4 hits
         effects.durabilityHits += 4
