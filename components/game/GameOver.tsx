@@ -39,15 +39,26 @@ export function GameOver({ distance, score, highScore, hasNFTs, onPlayAgain, onC
   const [hasClaimed, setHasClaimed] = useState(false)
   const [hasSubmittedScore, setHasSubmittedScore] = useState(false)
   
+  // Ensure lifetimeRewards is a number
+  const safeLifetimeRewards = typeof lifetimeRewards === 'number' ? lifetimeRewards : 0
+  // Ensure globalHighScore is a number
+  const safeGlobalHighScore = typeof globalHighScore === 'number' ? globalHighScore : 0
+  
   // Prevent component from being hidden during transactions
   useEffect(() => {
     // Ensure component stays visible even when Farcaster modal opens
-    const gameOverElement = document.querySelector('[data-game-over]')
-    if (gameOverElement) {
-      (gameOverElement as HTMLElement).style.display = 'block'
-      (gameOverElement as HTMLElement).style.visibility = 'visible'
-      (gameOverElement as HTMLElement).style.opacity = '1'
-    }
+    // Use setTimeout to ensure DOM is ready
+    const timer = setTimeout(() => {
+      const gameOverElement = document.querySelector('[data-game-over]')
+      if (gameOverElement) {
+        const element = gameOverElement as HTMLElement
+        element.style.display = 'flex'
+        element.style.visibility = 'visible'
+        element.style.opacity = '1'
+      }
+    }, 0)
+    
+    return () => clearTimeout(timer)
   }, [isClaiming, isSubmitting])
 
   // Reset claim state when score changes (new game)
@@ -162,8 +173,8 @@ export function GameOver({ distance, score, highScore, hasNFTs, onPlayAgain, onC
                 {/* Total Lifetime Rewards */}
                 {hasNFTs && (
                   <p className="text-xs sm:text-sm text-purple-400/70 mt-2 font-medium">
-                    {lifetimeRewards > 0 
-                      ? `Total Claimed: ${lifetimeRewards.toFixed(2)} $DEGEN`
+                    {safeLifetimeRewards > 0 
+                      ? `Total Claimed: ${safeLifetimeRewards.toFixed(2)} $DEGEN`
                       : "Total Claimed: 0 $DEGEN"
                     }
                   </p>
@@ -201,7 +212,7 @@ export function GameOver({ distance, score, highScore, hasNFTs, onPlayAgain, onC
                           ) : hasClaimed ? (
                             <>✅ Claimed</>
                           ) : (
-                            <>💰 CLAIM<br />{score} $DEGEN</>
+                            <span>💰 CLAIM<br />{score} $DEGEN</span>
                           )}
                         </span>
                       </Button>
@@ -245,7 +256,7 @@ export function GameOver({ distance, score, highScore, hasNFTs, onPlayAgain, onC
                           ) : hasSubmittedScore ? (
                             <>✅ Score Submitted</>
                           ) : (
-                            <>📊 Submit Score<br />Onchain (Free)</>
+                            <span>📊 Submit Score<br />Onchain (Free)</span>
                           )}
                         </span>
                       </Button>
@@ -266,9 +277,9 @@ export function GameOver({ distance, score, highScore, hasNFTs, onPlayAgain, onC
                 <p className="text-3xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-orange-300">
                   {highScore}m
                 </p>
-                {globalHighScore > 0 && (
+                {safeGlobalHighScore > 0 && (
                   <p className="text-xs sm:text-sm text-yellow-200/70 mt-2 font-medium">
-                    Global Record: {globalHighScore}m
+                    Global Record: {safeGlobalHighScore}m
                   </p>
                 )}
               </div>
