@@ -53,14 +53,14 @@ export const TRAITS: Trait[] = [
   {
     id: 7,
     name: "Gold Hands",
-    description: ["2x $DEGEN rewards", "-10% speed"],
+    description: ["Can take 4 hits", "Immune to small obstacles"],
     icon: "🥇",
     unlocked: true,
   },
   {
     id: 8,
     name: "Diamond Hands",
-    description: ["Can take 4 hits", "Immune to small obstacles"],
+    description: ["2x $DEGEN rewards", "-10% speed"],
     icon: "💎",
     unlocked: true,
   },
@@ -155,14 +155,14 @@ export function calculateTraitEffects(traitIds: number[]): ActiveTraitEffects {
         effects.durabilityHits += 2
         effects.speedMultiplier -= 0.05
         break
-      case 7: // Gold Hands
+      case 7: // Gold Hands - 4 hits
+        effects.durabilityHits += 4
+        // Removed speed penalty
+        break
+      case 8: // Diamond Hands
         effects.degenMultiplier = 2
         effects.speedMultiplier -= 0.1
         effects.rewardMultiplier = 1.5
-        break
-      case 8: // Diamond Hands - 4 hits
-        effects.durabilityHits += 4
-        // Removed speed penalty
         break
       case 9: // Shoulder Pads - 4 hits
         effects.hitsAbsorbed += 4

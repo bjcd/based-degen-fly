@@ -38,9 +38,9 @@ export function checkCollision(
       }
 
       if (collided) {
-        // Check if Diamond Hands can pass through small obstacles (must have Diamond Hands trait selected)
-        // For Diamond Hands, small obstacles are completely transparent - no collision at all
-        if (obstacle.isSmall && selectedTraits.includes(8)) {
+        // Check if Gold Hands can pass through small obstacles (must have Gold Hands trait selected)
+        // For Gold Hands, small obstacles are completely transparent - no collision at all
+        if (obstacle.isSmall && selectedTraits.includes(7)) {
           continue // Pass through completely, no collision registered, no hit taken
         }
 
