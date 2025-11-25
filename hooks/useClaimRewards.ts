@@ -9,11 +9,48 @@ export function useClaimRewards() {
   const [isClaiming, setIsClaiming] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [transactionStartTime, setTransactionStartTime] = useState<number | null>(null)
 
   const { writeContract, data: hash, isPending, error: writeError, reset: resetWrite } = useWriteContract()
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash,
   })
+
+  // Monitor if transaction hash is generated (means wallet accepted it)
+  useEffect(() => {
+    if (hash) {
+      console.log("✅ Transaction hash received:", hash)
+      setTransactionStartTime(null) // Clear timeout since we got a hash
+    }
+  }, [hash])
+
+  // Monitor if transaction is pending (wallet modal is open)
+  useEffect(() => {
+    if (isPending) {
+      console.log("⏳ Transaction pending - wallet modal should be open")
+    }
+  }, [isPending])
+
+  // Timeout detection: if transaction doesn't get submitted within 30 seconds
+  useEffect(() => {
+    if (!transactionStartTime || hash || writeError) {
+      return // No timeout needed if we have a hash, error, or no transaction started
+    }
+
+    const checkTimeout = setInterval(() => {
+      if (!hash && !writeError && transactionStartTime) {
+        const elapsed = Date.now() - transactionStartTime
+        if (elapsed > 30000) {
+          console.warn("⚠️ Transaction timeout - no hash or error after 30s")
+          setError("Transaction timeout - the wallet modal may not have opened. Please try again or check your wallet connection.")
+          setIsClaiming(false)
+          setTransactionStartTime(null)
+        }
+      }
+    }, 1000) // Check every second
+
+    return () => clearInterval(checkTimeout)
+  }, [transactionStartTime, hash, writeError])
 
   // Handle transaction success
   useEffect(() => {
@@ -27,6 +64,8 @@ export function useClaimRewards() {
   // Handle transaction errors (including user rejection)
   useEffect(() => {
     if (writeError) {
+      console.error("❌ Transaction error:", writeError)
+      setTransactionStartTime(null) // Clear timeout since we got an error
       setIsClaiming(false)
       // Check if user rejected the transaction
       if (writeError.message?.includes("User rejected") || writeError.message?.includes("rejected")) {
@@ -35,6 +74,12 @@ export function useClaimRewards() {
         setError("Wallet extension was reloaded. Please refresh the page and try again.")
       } else if (writeError.message?.includes("429") || writeError.message?.includes("Too Many Requests")) {
         setError("Network is busy. Please wait a moment and try again.")
+      } else if (writeError.message?.includes("execution reverted") || writeError.message?.includes("revert")) {
+        // Contract execution error - might be missing function or invalid parameters
+        const errorMsg = writeError.message.includes("_submitScore") || writeError.message.includes("submitScore")
+          ? "Contract error: Score submission function not found. Please check your contract version."
+          : writeError.message || "Transaction reverted. Check contract function exists."
+        setError(errorMsg)
       } else {
         setError(writeError.message || "Transaction failed")
       }
@@ -93,15 +138,27 @@ export function useClaimRewards() {
 
       const { signature } = await response.json()
 
-      // Call contract
+      console.log("📝 Calling claimRewards with:", {
+        address: GAME_REWARDS_CONTRACT_ADDRESS,
+        hatsCollected,
+        nonce: newNonce,
+        signature: signature.substring(0, 20) + "...",
+        chainId: CHAIN_ID,
+      })
+
+      // Call contract - writeContract returns void, errors are handled via writeError
+      // Note: In Wagmi v2, writeContract doesn't throw - errors come via writeError state
+      console.log("📤 Calling writeContract...")
+      setTransactionStartTime(Date.now()) // Start timeout timer
       writeContract({
         address: GAME_REWARDS_CONTRACT_ADDRESS,
         abi: GAME_REWARDS_ABI,
         functionName: "claimRewards",
         args: [BigInt(hatsCollected), signature as `0x${string}`, BigInt(newNonce)],
       })
+      console.log("✅ writeContract called - wallet modal should open")
     } catch (err) {
-      console.error("Error claiming rewards:", err)
+      console.error("❌ Error claiming rewards:", err)
       setError(err instanceof Error ? err.message : "Failed to claim rewards")
       setIsClaiming(false)
       setSuccessMessage(null)

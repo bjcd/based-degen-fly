@@ -38,6 +38,17 @@ export function GameOver({ distance, score, highScore, hasNFTs, onPlayAgain, onC
   const { globalHighScore } = useGlobalHighScore()
   const [hasClaimed, setHasClaimed] = useState(false)
   const [hasSubmittedScore, setHasSubmittedScore] = useState(false)
+  
+  // Prevent component from being hidden during transactions
+  useEffect(() => {
+    // Ensure component stays visible even when Farcaster modal opens
+    const gameOverElement = document.querySelector('[data-game-over]')
+    if (gameOverElement) {
+      (gameOverElement as HTMLElement).style.display = 'block'
+      (gameOverElement as HTMLElement).style.visibility = 'visible'
+      (gameOverElement as HTMLElement).style.opacity = '1'
+    }
+  }, [isClaiming, isSubmitting])
 
   // Reset claim state when score changes (new game)
   useEffect(() => {
@@ -85,7 +96,19 @@ export function GameOver({ distance, score, highScore, hasNFTs, onPlayAgain, onC
   }
 
   return (
-    <div className="relative flex flex-col items-center gap-6 sm:gap-8 rounded-3xl bg-gradient-to-br from-purple-600 via-purple-500 to-purple-600 p-8 sm:p-12 shadow-2xl backdrop-blur-xl mx-4 border-2 border-purple-300/50 overflow-hidden max-w-lg w-full" style={{ pointerEvents: 'auto' }}>
+    <div 
+      data-game-over
+      className="relative flex flex-col items-center gap-6 sm:gap-8 rounded-3xl bg-gradient-to-br from-purple-600 via-purple-500 to-purple-600 p-8 sm:p-12 shadow-2xl backdrop-blur-xl mx-4 border-2 border-purple-300/50 overflow-hidden max-w-lg w-full" 
+      style={{ 
+        pointerEvents: 'auto',
+        position: 'relative',
+        zIndex: 10002, // Very high z-index to stay above Farcaster modal (which is typically 10000)
+        isolation: 'isolate', // Create new stacking context
+        display: 'flex', // Ensure it's always displayed
+        visibility: 'visible', // Ensure it's always visible
+        opacity: 1, // Ensure it's not transparent
+      }}
+    >
       {/* Animated background effects */}
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-pulse pointer-events-none z-0" />
       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-pink-400 to-transparent animate-shimmer pointer-events-none z-0" />

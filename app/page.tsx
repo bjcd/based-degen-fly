@@ -254,8 +254,16 @@ export default function CopterGame() {
   const metersDistance = Math.floor(distance / 10)
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-gradient-to-br from-purple-600 via-purple-500 to-purple-600 md:p-4">
-      <div className="flex w-full max-w-4xl flex-col items-center gap-4">
+    <div 
+      className="flex min-h-screen w-full items-center justify-center bg-gradient-to-br from-purple-600 via-purple-500 to-purple-600 md:p-4"
+      style={{ 
+        position: 'relative',
+        zIndex: 1,
+        minHeight: '100vh',
+        background: 'linear-gradient(to bottom right, rgb(147, 51, 234), rgb(168, 85, 247), rgb(147, 51, 234))', // Ensure background stays
+      }}
+    >
+      <div className="flex w-full max-w-4xl flex-col items-center gap-4" style={{ position: 'relative', zIndex: 1 }}>
         {gameState === "menu" && (
           <Menu
             highScore={highScore}
@@ -308,14 +316,23 @@ export default function CopterGame() {
         )}
 
         {gameState === "gameover" && (
-          <GameOver
-            distance={metersDistance}
-            score={score}
-            highScore={highScore}
-            hasNFTs={hasNFTs}
-            onPlayAgain={() => setGameState("playing")}
-            onChangeTraits={() => setGameState("traits")}
-          />
+          <div 
+            className="relative w-full flex items-center justify-center"
+            style={{ 
+              position: 'relative',
+              zIndex: 10001, // Above Farcaster modal (typically 10000)
+              minHeight: 'auto',
+            }}
+          >
+            <GameOver
+              distance={metersDistance}
+              score={score}
+              highScore={highScore}
+              hasNFTs={hasNFTs}
+              onPlayAgain={() => setGameState("playing")}
+              onChangeTraits={() => setGameState("traits")}
+            />
+          </div>
         )}
       </div>
     </div>
