@@ -12,25 +12,48 @@ const selectedChain = isMainnet ? base : baseSepolia
 const primaryRpcUrl = process.env.NEXT_PUBLIC_RPC_URL || (isMainnet ? "https://mainnet.base.org" : "https://sepolia.base.org")
 const fallbackRpcUrl = process.env.NEXT_PUBLIC_RPC_URL_ALT || (isMainnet ? "https://base-rpc.publicnode.com" : "https://base-sepolia-rpc.publicnode.com")
 
-const transport = fallback([
-  http(primaryRpcUrl, {
-    timeout: 10000,
-    retryCount: 1,
-  }),
-  http(fallbackRpcUrl, {
-    timeout: 10000,
-    retryCount: 1,
-  }),
-])
+// Alchemy RPC as third fallback (if API key is provided)
+const alchemyApiKey = process.env.ALCHEMY_API_KEY
+const alchemyMainnetUrl = alchemyApiKey ? `https://base-mainnet.g.alchemy.com/v2/${alchemyApiKey}` : null
+const alchemySepoliaUrl = alchemyApiKey ? `https://base-sepolia.g.alchemy.com/v2/${alchemyApiKey}` : null
+
+// Build transport for Base mainnet: primary -> fallback -> Alchemy (if available)
+const mainnetUrls = [
+  { url: isMainnet ? primaryRpcUrl : "https://mainnet.base.org", timeout: 10000, retryCount: 1 },
+  { url: isMainnet ? fallbackRpcUrl : "https://base-rpc.publicnode.com", timeout: 10000, retryCount: 1 },
+]
+if (alchemyMainnetUrl) {
+  mainnetUrls.push({ url: alchemyMainnetUrl, timeout: 10000, retryCount: 1 })
+}
+const mainnetTransport = fallback(
+  mainnetUrls.map(({ url, timeout, retryCount }) =>
+    http(url, { timeout, retryCount })
+  )
+)
+
+// Build transport for Base Sepolia: primary -> fallback -> Alchemy (if available)
+const sepoliaUrls = [
+  { url: isMainnet ? "https://sepolia.base.org" : primaryRpcUrl, timeout: 10000, retryCount: 1 },
+  { url: isMainnet ? "https://base-sepolia-rpc.publicnode.com" : fallbackRpcUrl, timeout: 10000, retryCount: 1 },
+]
+if (alchemySepoliaUrl) {
+  sepoliaUrls.push({ url: alchemySepoliaUrl, timeout: 10000, retryCount: 1 })
+}
+const sepoliaTransport = fallback(
+  sepoliaUrls.map(({ url, timeout, retryCount }) =>
+    http(url, { timeout, retryCount })
+  )
+)
 
 export const config = createConfig({
-  chains: [selectedChain],
+  chains: [base, baseSepolia], // Include both chains so wallet can switch
   connectors: [
     miniAppConnector(), // Farcaster wallet connector - MUST be first for auto-connect
     injected(),
   ],
   transports: {
-    [selectedChain.id]: transport,
+    [base.id]: mainnetTransport,
+    [baseSepolia.id]: sepoliaTransport,
   },
   ssr: true,
 })
@@ -41,6 +64,7 @@ console.log("🔧 Wagmi config:", {
   isMainnet,
   primaryRpcUrl,
   fallbackRpcUrl,
+  alchemyEnabled: !!alchemyApiKey,
 })
 
 // NFT Contract (Based Degen)
