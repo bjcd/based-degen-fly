@@ -8,21 +8,21 @@ import "./globals.css"
 const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://yourdomain.com"
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://fly.thebaseddegens.xyz"
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: "Based Degen Sky",
-  description: "Fly through obstacles, collect hats, and earn $DEGEN rewards!",
+  description: "Fly through obstacles",
   generator: "v0.app",
   icons: {
     icon: [
       {
-        url: "/icon-light-32x32.png",
+        url: "/miniapp-icon-large.png",
         media: "(prefers-color-scheme: light)",
       },
       {
-        url: "/icon-dark-32x32.png",
+        url: "/miniapp-icon-large.png",
         media: "(prefers-color-scheme: dark)",
       },
       {
@@ -34,11 +34,11 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "Based Degen Sky",
-    description: "Fly through obstacles, collect hats, and earn $DEGEN rewards!",
+    description: "Fly through obstacles",
     type: "website",
     images: [
       {
-        url: `${siteUrl}/icon-light-32x32.png`,
+        url: `${siteUrl}/miniapp-icon-large.png`,
         width: 1200,
         height: 630,
         alt: "Based Degen Sky",
@@ -50,14 +50,14 @@ export const metadata: Metadata = {
     // Format must include button object with action for validation to pass
     "fc:miniapp": JSON.stringify({
       version: "1",
-      imageUrl: `${siteUrl}/icon-light-32x32.png`,
+      imageUrl: `${siteUrl}/miniapp-icon-large.png`,
       button: {
         title: "PLAY NOW",
         action: {
           type: "launch_frame", // Use "launch_frame" for backward compatibility
           name: "Based Degen Sky",
           url: siteUrl,
-          splashImageUrl: `${siteUrl}/icon-light-32x32.png`,
+          splashImageUrl: `${siteUrl}/miniapp-icon-large.png`,
           splashBackgroundColor: "#7c3aed",
         },
       },
@@ -74,7 +74,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`font-sans antialiased`}>
         <Web3Provider>
-        {children}
+          {children}
         </Web3Provider>
         <Analytics />
       </body>

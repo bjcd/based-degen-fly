@@ -75,8 +75,8 @@ export function GameOver({ distance, score, highScore, hasNFTs, onPlayAgain, onC
   return (
     <div className="relative flex flex-col items-center gap-6 sm:gap-8 rounded-3xl bg-gradient-to-br from-purple-600 via-purple-500 to-purple-600 p-8 sm:p-12 shadow-2xl backdrop-blur-xl mx-4 border-2 border-purple-300/50 overflow-hidden max-w-lg w-full">
       {/* Animated background effects */}
-      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-pulse" />
-      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-pink-400 to-transparent animate-shimmer" />
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-pulse pointer-events-none" />
+      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-pink-400 to-transparent animate-shimmer pointer-events-none" />
       
       {/* Main content */}
       <div className="relative z-10 flex flex-col items-center gap-6 w-full">
@@ -156,7 +156,7 @@ export function GameOver({ distance, score, highScore, hasNFTs, onPlayAgain, onC
                         onClick={handleClaim}
                         disabled={isClaiming || hasClaimed}
                         size="lg"
-                        className="relative bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold text-base sm:text-lg px-6 py-4 w-full rounded-xl shadow-2xl hover:shadow-purple-500/50 transition-all hover:scale-105 border-2 border-purple-300/70 disabled:opacity-50 disabled:cursor-not-allowed animate-pulse"
+                        className="relative z-20 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold text-base sm:text-lg px-6 py-4 w-full rounded-xl shadow-2xl hover:shadow-purple-500/50 transition-all hover:scale-105 border-2 border-purple-300/70 disabled:opacity-50 disabled:cursor-not-allowed animate-pulse pointer-events-auto"
                       >
                         <span className="relative z-10 flex items-center justify-center gap-2">
                           {isClaiming ? (
@@ -198,7 +198,7 @@ export function GameOver({ distance, score, highScore, hasNFTs, onPlayAgain, onC
                         onClick={handleSubmitScore}
                         disabled={isSubmitting || hasSubmittedScore || score === 0}
                         size="lg"
-                        className="relative bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white font-bold text-sm sm:text-base px-4 py-3 w-full rounded-xl shadow-lg hover:shadow-purple-500/50 transition-all hover:scale-105 border-2 border-purple-300/70 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="relative z-20 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white font-bold text-sm sm:text-base px-4 py-3 w-full rounded-xl shadow-lg hover:shadow-purple-500/50 transition-all hover:scale-105 border-2 border-purple-300/70 disabled:opacity-50 disabled:cursor-not-allowed pointer-events-auto"
                       >
                         <span className="relative z-10 flex items-center justify-center gap-2">
                           {isSubmitting ? (
