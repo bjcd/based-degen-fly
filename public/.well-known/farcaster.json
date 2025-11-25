@@ -1,0 +1,41 @@
+{
+    "accountAssociation": {
+        "header": "",
+        "payload": "",
+        "signature": ""
+    },
+    "miniapp": {
+        "name": "Based Degen Sky",
+        "version": "1",
+        "iconUrl": "https://yourdomain.com/icon-light-32x32.png",
+        "homeUrl": "https://yourdomain.com",
+        "imageUrl": "https://yourdomain.com/icon-light-32x32.png",
+        "buttonTitle": "PLAY NOW",
+        "splashImageUrl": "https://yourdomain.com/icon-light-32x32.png",
+        "splashBackgroundColor": "#7c3aed",
+        "subtitle": "Fly through obstacles, collect hats, and earn $DEGEN rewards!",
+        "description": "Based Degen Sky - An endless flying game where you collect hats and earn $DEGEN rewards. Hold a Based Degen NFT to claim your rewards!",
+        "primaryCategory": "games",
+        "screenshotUrls": [
+            "https://yourdomain.com/icon-light-32x32.png"
+        ],
+        "heroImageUrl": "https://yourdomain.com/icon-light-32x32.png",
+        "tags": [
+            "games",
+            "degen",
+            "entertainment",
+            "nft",
+            "web3"
+        ],
+        "tagline": "Fly, collect hats, earn $DEGEN!",
+        "ogImageUrl": "https://yourdomain.com/icon-light-32x32.png",
+        "ogTitle": "Based Degen Sky",
+        "requiredCapabilities": [
+            "wallet.getEthereumProvider",
+            "actions.addMiniApp",
+            "actions.composeCast",
+            "actions.openUrl"
+        ]
+    }
+}
+
