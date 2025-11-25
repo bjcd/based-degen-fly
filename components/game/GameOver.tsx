@@ -60,26 +60,38 @@ export function GameOver({ distance, score, highScore, hasNFTs, onPlayAgain, onC
     }
   }, [isScoreSubmitted])
 
-  const handleClaim = async () => {
+  const handleClaim = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    console.log("🔘 Claim button clicked", { score, hasNFTs, isClaiming, hasClaimed })
     if (score > 0 && hasNFTs && !isClaiming && !hasClaimed) {
+      console.log("✅ Calling claimRewards")
       await claimRewards(score)
+    } else {
+      console.log("❌ Claim conditions not met")
     }
   }
 
-  const handleSubmitScore = async () => {
-    if (score > 0 && !isSubmitting && !hasSubmittedScore) {
+  const handleSubmitScore = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    console.log("🔘 Submit Score button clicked", { score, isSubmitting, hasSubmittedScore })
+    if (!isSubmitting && !hasSubmittedScore) {
+      console.log("✅ Calling submitScore with score:", score)
       await submitScore(score)
+    } else {
+      console.log("❌ Submit conditions not met", { isSubmitting, hasSubmittedScore })
     }
   }
 
   return (
-    <div className="relative flex flex-col items-center gap-6 sm:gap-8 rounded-3xl bg-gradient-to-br from-purple-600 via-purple-500 to-purple-600 p-8 sm:p-12 shadow-2xl backdrop-blur-xl mx-4 border-2 border-purple-300/50 overflow-hidden max-w-lg w-full">
+    <div className="relative flex flex-col items-center gap-6 sm:gap-8 rounded-3xl bg-gradient-to-br from-purple-600 via-purple-500 to-purple-600 p-8 sm:p-12 shadow-2xl backdrop-blur-xl mx-4 border-2 border-purple-300/50 overflow-hidden max-w-lg w-full" style={{ pointerEvents: 'auto' }}>
       {/* Animated background effects */}
-      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-pulse pointer-events-none" />
-      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-pink-400 to-transparent animate-shimmer pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-pulse pointer-events-none z-0" />
+      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-pink-400 to-transparent animate-shimmer pointer-events-none z-0" />
       
       {/* Main content */}
-      <div className="relative z-10 flex flex-col items-center gap-6 w-full">
+      <div className="relative z-30 flex flex-col items-center gap-6 w-full" style={{ pointerEvents: 'auto' }}>
         {/* Title */}
         <div className="text-center">
           <h2 className="text-3xl sm:text-5xl font-black bg-gradient-to-r from-pink-400 via-purple-400 to-pink-400 bg-clip-text text-transparent animate-gradient bg-[length:200%_auto]">
@@ -111,8 +123,8 @@ export function GameOver({ distance, score, highScore, hasNFTs, onPlayAgain, onC
 
           {/* $DEGEN card */}
           <div className="relative bg-black/40 backdrop-blur-sm rounded-2xl p-5 sm:p-6 border-2 border-purple-400/30 hover:border-pink-400/50 transition-all hover:scale-[1.02]">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex-1">
+            <div className="flex items-center justify-between gap-4 min-w-0">
+              <div className="flex-1 min-w-0">
                 <p className="text-xs sm:text-sm text-purple-300/80 uppercase tracking-wider font-semibold mb-1">
                   {hasNFTs ? "$DEGEN Earned" : "$DEGEN Preview"}
                 </p>
@@ -134,11 +146,11 @@ export function GameOver({ distance, score, highScore, hasNFTs, onPlayAgain, onC
                   </p>
                 )}
               </div>
-              <div className="flex flex-col items-end gap-3">
-                <div className="text-4xl sm:text-5xl">💰</div>
+              <div className="flex flex-col items-end gap-3 relative z-40 min-w-0 flex-shrink-0 max-w-[50%] sm:max-w-[45%]">
+                <div className="text-4xl sm:text-5xl flex-shrink-0">💰</div>
                 {/* Claim button or NFT message */}
                 {hasNFTs && score > 0 ? (
-                  <div className="flex flex-col items-end gap-2 w-full">
+                  <div className="flex flex-col items-end gap-2 min-w-0 w-full relative z-40">
                     {successMessage ? (
                       <div className="bg-purple-900/60 backdrop-blur-sm rounded-xl p-3 border-2 border-purple-400/50 text-center w-full">
                         <p className="text-purple-200 font-bold text-sm">
@@ -153,26 +165,28 @@ export function GameOver({ distance, score, highScore, hasNFTs, onPlayAgain, onC
                       </div>
                     ) : (
                       <Button
+                        type="button"
                         onClick={handleClaim}
-                        disabled={isClaiming || hasClaimed}
+                        disabled={isClaiming || hasClaimed || score === 0}
                         size="lg"
-                        className="relative z-20 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold text-base sm:text-lg px-6 py-4 w-full rounded-xl shadow-2xl hover:shadow-purple-500/50 transition-all hover:scale-105 border-2 border-purple-300/70 disabled:opacity-50 disabled:cursor-not-allowed animate-pulse pointer-events-auto"
+                        style={{ position: 'relative', zIndex: 50, pointerEvents: 'auto', maxWidth: '100%', minWidth: 0 }}
+                        className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold text-base sm:text-lg px-6 py-4 rounded-xl shadow-2xl hover:shadow-purple-500/50 transition-all hover:scale-105 border-2 border-purple-300/70 disabled:opacity-50 disabled:cursor-not-allowed animate-pulse cursor-pointer"
                       >
-                        <span className="relative z-10 flex items-center justify-center gap-2">
+                        <span className="relative z-10 flex items-center justify-center gap-2 text-center break-words">
                           {isClaiming ? (
                             <>⏳ Claiming...</>
                           ) : hasClaimed ? (
                             <>✅ Claimed</>
                           ) : (
-                            <>💰 CLAIM {score} $DEGEN</>
+                            <>💰 CLAIM<br />{score} $DEGEN</>
                           )}
                         </span>
                       </Button>
                     )}
                   </div>
                 ) : !hasNFTs ? (
-                  <div className="flex flex-col items-end gap-2 w-full">
-                    <div className="bg-purple-900/60 backdrop-blur-sm rounded-xl p-3 border-2 border-purple-400/50 text-center w-full">
+                  <div className="flex flex-col items-end gap-2 min-w-0 w-full relative z-40">
+                    <div className="bg-purple-900/60 backdrop-blur-sm rounded-xl p-3 border-2 border-purple-400/50 text-center min-w-0 w-full">
                       <p className="text-purple-200 font-semibold text-sm leading-tight">
                         🔒 Mint a Based Degen to claim
                       </p>
@@ -195,18 +209,20 @@ export function GameOver({ distance, score, highScore, hasNFTs, onPlayAgain, onC
                       </div>
                     ) : (
                       <Button
+                        type="button"
                         onClick={handleSubmitScore}
-                        disabled={isSubmitting || hasSubmittedScore || score === 0}
+                        disabled={isSubmitting || hasSubmittedScore}
                         size="lg"
-                        className="relative z-20 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white font-bold text-sm sm:text-base px-4 py-3 w-full rounded-xl shadow-lg hover:shadow-purple-500/50 transition-all hover:scale-105 border-2 border-purple-300/70 disabled:opacity-50 disabled:cursor-not-allowed pointer-events-auto"
+                        style={{ position: 'relative', zIndex: 50, pointerEvents: 'auto', maxWidth: '100%', minWidth: 0 }}
+                        className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white font-bold text-sm sm:text-base px-4 py-3 rounded-xl shadow-lg hover:shadow-purple-500/50 transition-all hover:scale-105 border-2 border-purple-300/70 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                       >
-                        <span className="relative z-10 flex items-center justify-center gap-2">
+                        <span className="relative z-10 flex items-center justify-center gap-2 text-center break-words">
                           {isSubmitting ? (
                             <>⏳ Submitting...</>
                           ) : hasSubmittedScore ? (
                             <>✅ Score Submitted</>
                           ) : (
-                            <>📊 Submit Score Onchain (Free)</>
+                            <>📊 Submit Score<br />Onchain (Free)</>
                           )}
                         </span>
                       </Button>

@@ -41,17 +41,19 @@ export default function CopterGame() {
   const [highScore, setHighScore] = useState(0)
   const [selectedTraits, setSelectedTraits] = useState<number[]>([])
 
-  // Auto-select owned traits (up to 4)
+  // Auto-select owned traits (up to 4) for NFT holders
+  // For non-NFT users, don't auto-select - let them choose (max 4)
   useEffect(() => {
     if (ownedTraits && ownedTraits.length > 0) {
-      // Auto-select first 4 owned traits
+      // Auto-select first 4 owned traits for NFT holders
       const traitsToSelect = ownedTraits.slice(0, 4)
       setSelectedTraits(traitsToSelect)
-    } else if (!isConnected) {
-      // If not connected, select first 4 unlocked traits (for preview)
+    } else if (!isConnected && selectedTraits.length === 0) {
+      // If not connected, select first 4 unlocked traits (for preview) - only if nothing selected
       const unlockedTraits = TRAITS.filter((t) => t.unlocked).slice(0, 4)
       setSelectedTraits(unlockedTraits.map((t) => t.id))
     }
+    // If connected but no NFTs, don't auto-select - user can choose
   }, [ownedTraits, isConnected])
   const [canvasDimensions, setCanvasDimensions] = useState({
     width: CANVAS_WIDTH_DESKTOP,
@@ -207,6 +209,9 @@ export default function CopterGame() {
   }, [gameState, selectedTraits, canvasDimensions, highScore])
 
   const toggleTrait = (traitId: number) => {
+    // For non-NFT users, allow selecting any unlocked trait (max 4)
+    // For NFT holders, allow selecting any owned trait (max 4)
+    const maxTraits = 4
     setSelectedTraits((prev) => {
       if (prev.includes(traitId)) {
         return prev.filter((id) => id !== traitId)

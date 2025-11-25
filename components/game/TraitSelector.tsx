@@ -12,10 +12,14 @@ type TraitSelectorProps = {
 }
 
 export function TraitSelector({ selectedTraits, onTraitToggle, onStart, ownedTraits, requiresWallet, loadingTraits }: TraitSelectorProps) {
-  // Show all unlocked traits, but lock the ones user doesn't own if wallet is required
+  // Show all unlocked traits
   const availableTraits = TRAITS.filter((t) => t.unlocked)
   const isTraitOwned = (traitId: number) => {
-    if (!requiresWallet || !ownedTraits) return true
+    // If wallet not required, all unlocked traits are available
+    if (!requiresWallet) return true
+    // If wallet required but no owned traits, allow all unlocked traits (for non-NFT users)
+    if (requiresWallet && (!ownedTraits || ownedTraits.length === 0)) return true
+    // If wallet required and has owned traits, only allow owned traits
     return ownedTraits.includes(traitId)
   }
 
@@ -28,13 +32,18 @@ export function TraitSelector({ selectedTraits, onTraitToggle, onStart, ownedTra
         </p>
       )}
       {!loadingTraits && requiresWallet && ownedTraits && ownedTraits.length === 0 && (
-        <p className="text-xs sm:text-base text-red-600 text-center font-semibold">
-          ⚠️ No Power traits found. Please connect a wallet with Based Degen NFTs.
+        <p className="text-xs sm:text-base text-purple-600 text-center">
+          Select up to 4 Power traits to use in the game
         </p>
       )}
       {!loadingTraits && requiresWallet && ownedTraits && ownedTraits.length > 0 && (
         <p className="text-xs sm:text-base text-purple-600 text-center">
           ✓ {selectedTraits.length} Power trait{selectedTraits.length !== 1 ? "s" : ""} active
+        </p>
+      )}
+      {!loadingTraits && !requiresWallet && (
+        <p className="text-xs sm:text-base text-purple-600 text-center">
+          Select up to 4 Power traits to use in the game
         </p>
       )}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4 w-full">

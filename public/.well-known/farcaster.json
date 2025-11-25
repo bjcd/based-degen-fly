@@ -14,7 +14,7 @@
         "splashImageUrl": "https://fly.thebaseddegens.xyz/icon.png",
         "splashBackgroundColor": "#7c3aed",
         "subtitle": "Fly through obstacles",
-        "description": "Based Degen Sky, an endless flying game where you collect hats, and earn $DEGEN rewards. Hold a Based Degen NFT to claim your rewards!",
+        "description": "Based Degen Sky, an endless flying game where you collect hats, and earn DEGEN rewards. Hold a Based Degen NFT to claim your rewards!",
         "primaryCategory": "games",
         "screenshotUrls": [
             "https://fly.thebaseddegens.xyz/miniapp-screenshot.png"
@@ -25,7 +25,7 @@
             "degen",
             "entertainment"
         ],
-        "tagline": "Fly, collect hats, earn $DEGEN!",
+        "tagline": "Fly, collect hats, earn DEGEN!",
         "ogImageUrl": "https://fly.thebaseddegens.xyz/icon.png",
         "ogTitle": "Based Degen Sky",
         "requiredCapabilities": [
