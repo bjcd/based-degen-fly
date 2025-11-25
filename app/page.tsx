@@ -254,15 +254,23 @@ export default function CopterGame() {
   const metersDistance = Math.floor(distance / 10)
 
   return (
-    <div 
-      className="flex min-h-screen w-full items-center justify-center bg-gradient-to-br from-purple-600 via-purple-500 to-purple-600 md:p-4"
-      style={{ 
-        position: 'relative',
-        zIndex: 1,
-        minHeight: '100vh',
-        background: 'linear-gradient(to bottom right, rgb(147, 51, 234), rgb(168, 85, 247), rgb(147, 51, 234))', // Ensure background stays
-      }}
-    >
+    <>
+      {/* Fixed background that stays visible even when modals open */}
+      <div 
+        className="fixed inset-0 bg-gradient-to-br from-purple-600 via-purple-500 to-purple-600"
+        style={{ 
+          zIndex: 0,
+          pointerEvents: 'none', // Don't block interactions
+        }}
+      />
+      <div 
+        className="relative flex min-h-screen w-full items-center justify-center md:p-4"
+        style={{ 
+          position: 'relative',
+          zIndex: 1,
+          minHeight: '100vh',
+        }}
+      >
       <div className="flex w-full max-w-4xl flex-col items-center gap-4" style={{ position: 'relative', zIndex: 1 }}>
         {gameState === "menu" && (
           <Menu
@@ -336,5 +344,6 @@ export default function CopterGame() {
         )}
       </div>
     </div>
+    </>
   )
 }

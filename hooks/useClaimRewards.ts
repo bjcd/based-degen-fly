@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { useAccount, useWriteContract, useWaitForTransactionReceipt, useSwitchChain } from "wagmi"
+import { useAccount, useWriteContract, useWaitForTransactionReceipt, useSwitchChain, useReadContract } from "wagmi"
 import { GAME_REWARDS_CONTRACT_ADDRESS, CHAIN_ID } from "@/lib/web3/config"
 import { GAME_REWARDS_ABI } from "@/lib/web3/abi"
 
@@ -55,10 +55,21 @@ export function useClaimRewards() {
     }
   }, [isPending, transactionStartTime, hash, writeError])
 
-  // Monitor writeStatus
+  // Monitor writeStatus and detect when wallet closes without response
   useEffect(() => {
     console.log("📊 writeContract status:", writeStatus, { isPending, hash: !!hash, error: !!writeError })
-  }, [writeStatus, isPending, hash, writeError])
+    
+    // If status changes from pending to idle without hash/error, wallet closed without response
+    if (writeStatus === 'idle' && transactionStartTime && !hash && !writeError && !isPending) {
+      const elapsed = Date.now() - transactionStartTime
+      if (elapsed > 2000) { // Give it 2 seconds to avoid false positives
+        console.warn("⚠️ Wallet closed without response - status is idle but no hash/error")
+        setError("Transaction was cancelled or the wallet closed without confirming. Please try again.")
+        setIsClaiming(false)
+        setTransactionStartTime(null)
+      }
+    }
+  }, [writeStatus, isPending, hash, writeError, transactionStartTime])
 
   // Timeout detection: if transaction doesn't get submitted within 30 seconds
   useEffect(() => {
@@ -184,6 +195,67 @@ export function useClaimRewards() {
         signature: signature.substring(0, 20) + "...",
         chainId: CHAIN_ID,
       })
+
+      // Pre-flight check: Validate contract address and basic parameters
+      if (!GAME_REWARDS_CONTRACT_ADDRESS || GAME_REWARDS_CONTRACT_ADDRESS === '0x0000000000000000000000000000000000000000') {
+        console.error("❌ Invalid contract address")
+        setError("Invalid contract address configured")
+        setIsClaiming(false)
+        return
+      }
+      
+      if (!signature || signature.length !== 132) { // 0x + 130 hex chars
+        console.error("❌ Invalid signature format")
+        setError("Invalid signature from backend")
+        setIsClaiming(false)
+        return
+      }
+      
+      // Check if contract is paused
+      try {
+        const { createPublicClient, http } = await import('viem')
+        const { base } = await import('wagmi/chains')
+        const publicClient = createPublicClient({
+          chain: base,
+          transport: http(),
+        })
+        
+        const isPaused = await publicClient.readContract({
+          address: GAME_REWARDS_CONTRACT_ADDRESS,
+          abi: GAME_REWARDS_ABI,
+          functionName: 'paused',
+        })
+        
+        if (isPaused) {
+          console.error("❌ Contract is paused")
+          setError("Contract is currently paused. Please try again later.")
+          setIsClaiming(false)
+          return
+        }
+        
+        // Try to simulate the transaction to catch revert reasons
+        try {
+          await publicClient.simulateContract({
+            account: address,
+            address: GAME_REWARDS_CONTRACT_ADDRESS,
+            abi: GAME_REWARDS_ABI,
+            functionName: 'claimRewards',
+            args: [BigInt(hatsCollected), signature as `0x${string}`, BigInt(newNonce)],
+          })
+          console.log("✅ Transaction simulation passed")
+        } catch (simError: any) {
+          console.error("❌ Transaction simulation failed:", simError)
+          const errorMsg = simError?.shortMessage || simError?.message || "Transaction would fail"
+          setError(`Transaction would fail: ${errorMsg}`)
+          setIsClaiming(false)
+          return
+        }
+      } catch (checkError) {
+        console.warn("⚠️ Could not validate contract state:", checkError)
+        // Continue anyway - might be network issue
+      }
+      
+      console.log("✅ Pre-flight checks passed")
 
       // Call contract - writeContract returns void, errors are handled via writeError
       // Note: In Wagmi v2, writeContract doesn't throw - errors come via writeError state
