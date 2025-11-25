@@ -1,8 +1,8 @@
 {
     "accountAssociation": {
-        "header": "",
-        "payload": "",
-        "signature": ""
+        "header": "eyJmaWQiOjE3MDY0LCJ0eXBlIjoiY3VzdG9keSIsImtleSI6IjB4MjUxMzk5NkZENzNBNmZCNDQ2YTZBNmRhNDE1NEVjNTAzZURhYjhEMiJ9",
+        "payload": "eyJkb21haW4iOiJmbHkudGhlYmFzZWRkZWdlbnMueHl6In0",
+        "signature": "kqK7NpNzQO+ZSPJGr6h+GDmH2hdIZVs4M50nFpmqPUB8302JVck8QUhyQl/yY1BgieeOPclRDtTJ/uEHg3r2hBw="
     },
     "miniapp": {
         "name": "Based Degen Sky",
