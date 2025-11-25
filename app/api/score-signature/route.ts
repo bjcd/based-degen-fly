@@ -18,6 +18,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { address, score, nonce, chainId } = await request.json()
+    // Note: 'score' parameter is actually distance in meters
 
     if (!address || !score || !nonce || !chainId) {
       return NextResponse.json(
@@ -27,7 +28,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create message hash (same as contract expects)
-    // Contract does: keccak256(abi.encodePacked(msg.sender, score, nonce, block.chainid))
+    // Contract does: keccak256(abi.encodePacked(msg.sender, distance, nonce, block.chainid))
     const messageHash = keccak256(
       encodePacked(
         ["address", "uint256", "uint256", "uint256"],

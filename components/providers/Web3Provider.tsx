@@ -20,7 +20,7 @@ function AutoConnect() {
         const isInMiniApp = await sdk.isInMiniApp()
         if (isInMiniApp) {
           // Wait a bit more for SDK to fully initialize
-          await new Promise(resolve => setTimeout(resolve, 1000))
+          await new Promise(resolve => setTimeout(resolve, 1500))
           setSdkReady(true)
         } else {
           // Not in miniapp, no need to auto-connect
@@ -45,30 +45,51 @@ function AutoConnect() {
           isInMiniApp, 
           connectorsCount: connectors.length,
           connectorIds: connectors.map(c => c.id),
+          connectorNames: connectors.map(c => c.name),
           isConnected 
         })
         
         if (isInMiniApp && connectors.length > 0) {
-          // Find Farcaster connector (could be first or have specific ID)
-          const farcasterConnector = connectors.find(c => 
-            c.id === 'farcasterMiniApp' || 
-            c.id === 'farcaster' ||
-            c.name?.toLowerCase().includes('farcaster')
-          ) || connectors[0] // Fallback to first connector
+          // Find Farcaster connector - check multiple possible IDs
+          const farcasterConnector = connectors.find(c => {
+            const id = c.id.toLowerCase()
+            const name = (c.name || '').toLowerCase()
+            return id === 'farcasterminiapp' || 
+                   id === 'farcaster' ||
+                   id.includes('farcaster') ||
+                   name.includes('farcaster')
+          })
           
-          if (farcasterConnector && !isConnected) {
-            console.log("🔄 Attempting Farcaster auto-connect...", { 
-              connectorId: farcasterConnector.id,
-              connectorName: farcasterConnector.name 
-            })
-            try {
-              await connect({ connector: farcasterConnector })
-              console.log("✅ Farcaster auto-connect successful")
-            } catch (connectError) {
-              console.warn("⚠️ Farcaster auto-connect failed:", connectError)
+          if (farcasterConnector) {
+            if (!isConnected) {
+              console.log("🔄 Attempting Farcaster auto-connect...", { 
+                connectorId: farcasterConnector.id,
+                connectorName: farcasterConnector.name 
+              })
+              try {
+                // Use a small delay to ensure connector is fully ready
+                await new Promise(resolve => setTimeout(resolve, 200))
+                await connect({ connector: farcasterConnector })
+                console.log("✅ Farcaster auto-connect successful")
+              } catch (connectError: any) {
+                console.warn("⚠️ Farcaster auto-connect failed:", connectError)
+                // Retry once after a delay
+                setTimeout(async () => {
+                  try {
+                    await connect({ connector: farcasterConnector })
+                    console.log("✅ Farcaster auto-connect successful (retry)")
+                  } catch (retryError) {
+                    console.warn("⚠️ Farcaster auto-connect retry failed:", retryError)
+                  }
+                }, 1000)
+              }
+            } else {
+              console.log("✅ Already connected via Farcaster")
             }
           } else {
-            console.log("⚠️ No Farcaster connector found or already connected")
+            console.warn("⚠️ No Farcaster connector found. Available connectors:", 
+              connectors.map(c => ({ id: c.id, name: c.name }))
+            )
           }
         } else {
           console.log("📱 Not in Farcaster miniapp or no connectors available")
@@ -80,7 +101,9 @@ function AutoConnect() {
       }
     }
 
-    attemptAutoConnect()
+    // Add a small delay to ensure connectors are fully initialized
+    const timeoutId = setTimeout(attemptAutoConnect, 300)
+    return () => clearTimeout(timeoutId)
   }, [sdkReady, isConnected, connectors, connect, hasAttempted])
 
   return null

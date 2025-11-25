@@ -85,10 +85,10 @@ export function GameOver({ distance, score, highScore, hasNFTs, onPlayAgain, onC
   const handleClaim = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    console.log("🔘 Claim button clicked", { score, hasNFTs, isClaiming, hasClaimed })
+    console.log("🔘 Claim button clicked", { score, distance, hasNFTs, isClaiming, hasClaimed })
     if (score > 0 && hasNFTs && !isClaiming && !hasClaimed) {
-      console.log("✅ Calling claimRewards")
-      await claimRewards(score)
+      console.log("✅ Calling claimRewards with score:", score, "distance:", distance)
+      await claimRewards(score, distance)
     } else {
       console.log("❌ Claim conditions not met")
     }
@@ -97,10 +97,12 @@ export function GameOver({ distance, score, highScore, hasNFTs, onPlayAgain, onC
   const handleSubmitScore = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    console.log("🔘 Submit Score button clicked", { score, isSubmitting, hasSubmittedScore })
+    console.log("🔘 Submit Score button clicked", { distance, score, isSubmitting, hasSubmittedScore })
     if (!isSubmitting && !hasSubmittedScore) {
-      console.log("✅ Calling submitScore with score:", score)
-      await submitScore(score)
+      // Submit distance (in meters) for global high score tracking
+      // Note: distance is already in meters from GameOver props
+      console.log("✅ Calling submitScore with distance:", distance, "meters")
+      await submitScore(distance)
     } else {
       console.log("❌ Submit conditions not met", { isSubmitting, hasSubmittedScore })
     }

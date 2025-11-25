@@ -18,9 +18,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { address, hatsCollected, nonce, chainId } = await request.json()
+    const { address, hatsCollected, distance, nonce, chainId } = await request.json()
 
-    if (!address || !hatsCollected || !nonce || !chainId) {
+    if (!address || !hatsCollected || !distance || !nonce || !chainId) {
       return NextResponse.json(
         { error: "Missing required parameters" },
         { status: 400 }
@@ -28,11 +28,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Create message hash (same as contract expects)
-    // Contract does: keccak256(abi.encodePacked(msg.sender, hatsCollected, nonce, block.chainid))
+    // Contract does: keccak256(abi.encodePacked(msg.sender, hatsCollected, distance, nonce, block.chainid))
     const messageHash = keccak256(
       encodePacked(
-        ["address", "uint256", "uint256", "uint256"],
-        [address as `0x${string}`, BigInt(hatsCollected), BigInt(nonce), BigInt(chainId)]
+        ["address", "uint256", "uint256", "uint256", "uint256"],
+        [address as `0x${string}`, BigInt(hatsCollected), BigInt(distance), BigInt(nonce), BigInt(chainId)]
       )
     )
 

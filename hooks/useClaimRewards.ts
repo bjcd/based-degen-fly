@@ -137,7 +137,7 @@ export function useClaimRewards() {
     }
   }, [writeError])
 
-  const claimRewards = async (hatsCollected: number) => {
+  const claimRewards = async (hatsCollected: number, distance: number) => {
     if (!address) {
       setError("Please connect your wallet")
       return
@@ -167,7 +167,7 @@ export function useClaimRewards() {
       // Generate a unique nonce (using timestamp + random)
       const newNonce = Date.now() + Math.floor(Math.random() * 1000000)
 
-      // Get signature from backend
+      // Get signature from backend (includes both hatsCollected and distance)
       const response = await fetch("/api/claim-signature", {
         method: "POST",
         headers: {
@@ -176,6 +176,7 @@ export function useClaimRewards() {
         body: JSON.stringify({
           address,
           hatsCollected,
+          distance,
           nonce: newNonce,
           chainId: CHAIN_ID,
         }),
@@ -191,10 +192,26 @@ export function useClaimRewards() {
       console.log("📝 Calling claimRewards with:", {
         address: GAME_REWARDS_CONTRACT_ADDRESS,
         hatsCollected,
+        distance,
         nonce: newNonce,
         signature: signature.substring(0, 20) + "...",
         chainId: CHAIN_ID,
       })
+      
+      // Validate inputs
+      if (!distance || distance <= 0) {
+        console.error("❌ Invalid distance:", distance)
+        setError("Invalid distance value. Please try playing again.")
+        setIsClaiming(false)
+        return
+      }
+      
+      if (!hatsCollected || hatsCollected <= 0) {
+        console.error("❌ Invalid hatsCollected:", hatsCollected)
+        setError("Invalid score value. Please try playing again.")
+        setIsClaiming(false)
+        return
+      }
 
       // Pre-flight check: Validate contract address and basic parameters
       if (!GAME_REWARDS_CONTRACT_ADDRESS || GAME_REWARDS_CONTRACT_ADDRESS === '0x0000000000000000000000000000000000000000') {
@@ -240,12 +257,39 @@ export function useClaimRewards() {
             address: GAME_REWARDS_CONTRACT_ADDRESS,
             abi: GAME_REWARDS_ABI,
             functionName: 'claimRewards',
-            args: [BigInt(hatsCollected), signature as `0x${string}`, BigInt(newNonce)],
+            args: [BigInt(hatsCollected), BigInt(distance), signature as `0x${string}`, BigInt(newNonce)],
           })
           console.log("✅ Transaction simulation passed")
         } catch (simError: any) {
           console.error("❌ Transaction simulation failed:", simError)
-          const errorMsg = simError?.shortMessage || simError?.message || "Transaction would fail"
+          
+          // Extract the actual revert reason if available
+          let errorMsg = "Transaction would fail"
+          if (simError?.cause?.data?.errorName) {
+            errorMsg = simError.cause.data.errorName
+          } else if (simError?.cause?.data?.message) {
+            errorMsg = simError.cause.data.message
+          } else if (simError?.shortMessage) {
+            errorMsg = simError.shortMessage
+          } else if (simError?.message) {
+            errorMsg = simError.message
+          }
+          
+          // Check for common errors
+          if (errorMsg.includes("Invalid signature") || errorMsg.includes("signature")) {
+            errorMsg = "Invalid signature. Make sure the contract is the latest version with distance parameter."
+          } else if (errorMsg.includes("No rewards available") || errorMsg.includes("tokenCount")) {
+            errorMsg = "No rewards available. Check if DEGEN token is configured in the contract."
+          } else if (errorMsg.includes("function") && errorMsg.includes("revert")) {
+            // Check if this is a function signature mismatch (old contract)
+            const errorString = JSON.stringify(simError)
+            if (errorString.includes("hatsCollected, bytes signature") && !errorString.includes("distance")) {
+              errorMsg = "Contract version mismatch: The deployed contract is the old version without the distance parameter. Please deploy the new contract."
+            } else {
+              errorMsg = `Contract revert: ${errorMsg}. The contract may be an old version without the distance parameter.`
+            }
+          }
+          
           setError(`Transaction would fail: ${errorMsg}`)
           setIsClaiming(false)
           return
@@ -265,7 +309,7 @@ export function useClaimRewards() {
         address: GAME_REWARDS_CONTRACT_ADDRESS,
         abi: GAME_REWARDS_ABI,
         functionName: "claimRewards",
-        args: [BigInt(hatsCollected), signature as `0x${string}`, BigInt(newNonce)],
+        args: [BigInt(hatsCollected), BigInt(distance), signature as `0x${string}`, BigInt(newNonce)],
       })
       console.log("✅ writeContract called - wallet modal should open")
     } catch (err) {

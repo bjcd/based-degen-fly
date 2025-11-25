@@ -189,6 +189,7 @@ export const GAME_REWARDS_ABI = [
   {
     inputs: [
       { internalType: "uint256", name: "hatsCollected", type: "uint256" },
+      { internalType: "uint256", name: "distance", type: "uint256" },
       { internalType: "bytes", name: "signature", type: "bytes" },
       { internalType: "uint256", name: "nonce", type: "uint256" },
     ],
@@ -199,7 +200,7 @@ export const GAME_REWARDS_ABI = [
   },
   {
     inputs: [
-      { internalType: "uint256", name: "score", type: "uint256" },
+      { internalType: "uint256", name: "distance", type: "uint256" },
       { internalType: "bytes", name: "signature", type: "bytes" },
       { internalType: "uint256", name: "nonce", type: "uint256" },
     ],

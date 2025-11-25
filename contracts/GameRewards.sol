@@ -65,9 +65,9 @@ contract GameRewards {
     uint256 public maxClaimsPerDay; // 0 = unlimited
     mapping(address => mapping(uint256 => uint256)) public dailyClaims; // user => day => claim count
 
-    // Score tracking
-    uint256 public globalHighScore; // Best score across all players
-    mapping(address => uint256) public userHighScores; // user => best score
+    // Score tracking (distance in meters)
+    uint256 public globalHighScore; // Best distance (meters) across all players
+    mapping(address => uint256) public userHighScores; // user => best distance (meters)
     address public globalHighScoreHolder; // Address of player with global high score
 
     // ============ EVENTS ============
@@ -96,11 +96,11 @@ contract GameRewards {
         uint256 available
     );
     event MaxClaimsPerDayUpdated(uint256 newMax);
-    event ScoreSubmitted(address indexed user, uint256 score);
+    event ScoreSubmitted(address indexed user, uint256 distance); // distance in meters
     event NewGlobalHighScore(
         address indexed user,
-        uint256 newHighScore,
-        uint256 previousHighScore
+        uint256 newHighScore, // distance in meters
+        uint256 previousHighScore // distance in meters
     );
 
     // ============ MODIFIERS ============
@@ -256,16 +256,19 @@ contract GameRewards {
 
     /**
      * @notice Claim rewards based on hats collected
-     * @param hatsCollected Number of hats collected (score is already calculated in-game with multipliers)
-     * @param signature Backend signature verifying the hats collected
+     * @param hatsCollected Number of hats collected (for reward calculation)
+     * @param distance Distance traveled in meters (for score tracking)
+     * @param signature Backend signature verifying the hats collected and distance
      * @param nonce Unique nonce to prevent replay
      */
     function claimRewards(
         uint256 hatsCollected,
+        uint256 distance,
         bytes memory signature,
         uint256 nonce
     ) external whenNotPaused nonReentrant {
         require(hatsCollected > 0, "Must collect at least 1 hat");
+        require(distance > 0, "Distance must be > 0");
 
         // FIXED: Replay protection using (user, nonce) instead of full signature hash
         require(!usedNonces[msg.sender][nonce], "Nonce already used");
@@ -282,9 +285,15 @@ contract GameRewards {
             dailyClaims[msg.sender][today] = userDailyClaims + 1;
         }
 
-        // Verify signature (prevent cheating)
+        // Verify signature (prevent cheating) - includes both hatsCollected and distance
         bytes32 messageHash = keccak256(
-            abi.encodePacked(msg.sender, hatsCollected, nonce, block.chainid)
+            abi.encodePacked(
+                msg.sender,
+                hatsCollected,
+                distance,
+                nonce,
+                block.chainid
+            )
         );
         bytes32 ethSignedMessageHash = keccak256(
             abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash)
@@ -350,8 +359,8 @@ contract GameRewards {
         // Update analytics
         totalClaims[msg.sender]++;
 
-        // Submit score automatically when claiming rewards
-        _submitScoreInternal(msg.sender, hatsCollected);
+        // Submit distance for score tracking (not hatsCollected)
+        _submitScoreInternal(msg.sender, distance);
 
         emit RewardsClaimed(msg.sender, hatsCollected, tokens, amounts);
     }
@@ -359,17 +368,17 @@ contract GameRewards {
     // ============ SCORE SUBMISSION ============
 
     /**
-     * @notice Submit a game score on-chain (free, no rewards)
-     * @param score Game score (hats collected)
-     * @param signature Backend signature verifying the score
+     * @notice Submit a game distance on-chain (free, no rewards)
+     * @param distance Distance traveled in meters
+     * @param signature Backend signature verifying the distance
      * @param nonce Unique nonce to prevent replay
      */
     function submitScore(
-        uint256 score,
+        uint256 distance,
         bytes memory signature,
         uint256 nonce
     ) external whenNotPaused {
-        require(score > 0, "Score must be > 0");
+        require(distance > 0, "Distance must be > 0");
 
         // Replay protection using (user, nonce) - separate from claim nonces
         // Use a different nonce space by adding a large offset
@@ -379,7 +388,7 @@ contract GameRewards {
 
         // Verify signature (prevent cheating)
         bytes32 messageHash = keccak256(
-            abi.encodePacked(msg.sender, score, nonce, block.chainid)
+            abi.encodePacked(msg.sender, distance, nonce, block.chainid)
         );
         bytes32 ethSignedMessageHash = keccak256(
             abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash)
@@ -389,29 +398,29 @@ contract GameRewards {
         require(signer != address(0), "Invalid signature");
         require(signer == verifier, "Invalid signature");
 
-        _submitScoreInternal(msg.sender, score);
+        _submitScoreInternal(msg.sender, distance);
     }
 
     /**
-     * @notice Internal function to submit score (used by both claimRewards and submitScore)
+     * @notice Internal function to submit distance (used by both claimRewards and submitScore)
      * @param user Address of the user
-     * @param score Game score
+     * @param distance Distance traveled in meters
      */
-    function _submitScoreInternal(address user, uint256 score) internal {
-        // Update user's personal high score
-        if (score > userHighScores[user]) {
-            userHighScores[user] = score;
+    function _submitScoreInternal(address user, uint256 distance) internal {
+        // Update user's personal high score (distance in meters)
+        if (distance > userHighScores[user]) {
+            userHighScores[user] = distance;
         }
 
-        // Update global high score if this is a new record
-        if (score > globalHighScore) {
+        // Update global high score if this is a new record (distance in meters)
+        if (distance > globalHighScore) {
             uint256 previousHighScore = globalHighScore;
-            globalHighScore = score;
+            globalHighScore = distance;
             globalHighScoreHolder = user;
-            emit NewGlobalHighScore(user, score, previousHighScore);
+            emit NewGlobalHighScore(user, distance, previousHighScore);
         }
 
-        emit ScoreSubmitted(user, score);
+        emit ScoreSubmitted(user, distance);
     }
 
     // ============ ADMIN FUNCTIONS ============
@@ -472,14 +481,14 @@ contract GameRewards {
     }
 
     /**
-     * @notice Get global high score
+     * @notice Get global high score (distance in meters)
      */
     function getGlobalHighScore() external view returns (uint256) {
         return globalHighScore;
     }
 
     /**
-     * @notice Get user's high score
+     * @notice Get user's high score (distance in meters)
      */
     function getUserHighScore(address user) external view returns (uint256) {
         return userHighScores[user];
