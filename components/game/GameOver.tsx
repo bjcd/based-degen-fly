@@ -183,7 +183,6 @@ export function GameOver({ distance, score, highScore, hasNFTs, onPlayAgain, onC
                 )}
               </div>
               <div className="flex flex-col items-end gap-3 relative z-40 min-w-0 flex-shrink-0 max-w-[50%] sm:max-w-[45%]">
-                <div className="text-4xl sm:text-5xl flex-shrink-0">💰</div>
                 {/* Claim button or NFT message */}
                 {hasNFTs && score > 0 ? (
                   <div className="flex flex-col items-end gap-2 min-w-0 w-full relative z-40">
