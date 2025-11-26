@@ -18,10 +18,10 @@ type GameOverProps = {
 // Note: score already includes trait multipliers (e.g., 2x for Gold Teeth)
 // Default: 1 DEGEN per score point (1e18 wei)
 function calculateRewardPreview(score: number): number {
-  const rewardPerHat = process.env.NEXT_PUBLIC_DEGEN_REWARD_PER_HAT 
+  const rewardPerHat = process.env.NEXT_PUBLIC_DEGEN_REWARD_PER_HAT
     ? BigInt(process.env.NEXT_PUBLIC_DEGEN_REWARD_PER_HAT)
     : BigInt("1000000000000000000") // 1 DEGEN (18 decimals) default
-  
+
   // Score already includes multipliers, so multiply by reward per hat
   const totalWei = BigInt(Math.floor(score)) * rewardPerHat
   // Convert to DEGEN (divide by 1e18)
@@ -38,12 +38,12 @@ export function GameOver({ distance, score, highScore, hasNFTs, onPlayAgain, onC
   const { globalHighScore } = useGlobalHighScore()
   const [hasClaimed, setHasClaimed] = useState(false)
   const [hasSubmittedScore, setHasSubmittedScore] = useState(false)
-  
+
   // Ensure lifetimeRewards is a number
   const safeLifetimeRewards = typeof lifetimeRewards === 'number' ? lifetimeRewards : 0
   // Ensure globalHighScore is a number
   const safeGlobalHighScore = typeof globalHighScore === 'number' ? globalHighScore : 0
-  
+
   // Prevent component from being hidden during transactions
   useEffect(() => {
     // Ensure component stays visible even when Farcaster modal opens
@@ -57,7 +57,7 @@ export function GameOver({ distance, score, highScore, hasNFTs, onPlayAgain, onC
         element.style.opacity = '1'
       }
     }, 0)
-    
+
     return () => clearTimeout(timer)
   }, [isClaiming, isSubmitting])
 
@@ -109,10 +109,10 @@ export function GameOver({ distance, score, highScore, hasNFTs, onPlayAgain, onC
   }
 
   return (
-    <div 
+    <div
       data-game-over
-      className="relative flex flex-col items-center gap-6 sm:gap-8 rounded-3xl bg-gradient-to-br from-purple-600 via-purple-500 to-purple-600 p-8 sm:p-12 shadow-2xl backdrop-blur-xl mx-4 border-2 border-purple-300/50 overflow-hidden max-w-lg w-full" 
-      style={{ 
+      className="relative flex flex-col items-center gap-6 sm:gap-8 rounded-3xl bg-gradient-to-br from-purple-600 via-purple-500 to-purple-600 p-8 sm:p-12 shadow-2xl backdrop-blur-xl mx-4 border-2 border-purple-300/50 overflow-hidden max-w-lg w-full"
+      style={{
         pointerEvents: 'auto',
         position: 'relative',
         zIndex: 10002, // Very high z-index to stay above Farcaster modal (which is typically 10000)
@@ -125,7 +125,7 @@ export function GameOver({ distance, score, highScore, hasNFTs, onPlayAgain, onC
       {/* Animated background effects */}
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-pulse pointer-events-none z-0" />
       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-pink-400 to-transparent animate-shimmer pointer-events-none z-0" />
-      
+
       {/* Main content */}
       <div className="relative z-30 flex flex-col items-center gap-6 w-full" style={{ pointerEvents: 'auto' }}>
         {/* Title */}
@@ -175,7 +175,7 @@ export function GameOver({ distance, score, highScore, hasNFTs, onPlayAgain, onC
                 {/* Total Lifetime Rewards */}
                 {hasNFTs && (
                   <p className="text-xs sm:text-sm text-purple-400/70 mt-2 font-medium">
-                    {safeLifetimeRewards > 0 
+                    {safeLifetimeRewards > 0
                       ? `Total Claimed: ${safeLifetimeRewards.toFixed(2)} $DEGEN`
                       : "Total Claimed: 0 $DEGEN"
                     }
@@ -225,18 +225,18 @@ export function GameOver({ distance, score, highScore, hasNFTs, onPlayAgain, onC
                     <div className="bg-purple-900/60 backdrop-blur-sm rounded-xl p-3 border-2 border-purple-400/50 text-center min-w-0 w-full">
                       <p className="text-purple-200 font-semibold text-sm leading-tight">
                         🔒{" "}
-                        <a 
-                          href="https://farcaster.xyz/miniapps/JGXqJLzLcSNz/the-based-degens" 
-                          target="_blank" 
+                        <a
+                          href="https://farcaster.xyz/miniapps/JGXqJLzLcSNz/the-based-degens"
+                          target="_blank"
                           rel="noopener noreferrer"
                           className="text-purple-200 hover:text-white underline font-semibold"
                         >
                           Mint a Based Degen
                         </a>
                         {" "}or buy on{" "}
-                        <a 
-                          href="https://opensea.io/collection/the-based-degens/" 
-                          target="_blank" 
+                        <a
+                          href="https://opensea.io/collection/the-based-degens/"
+                          target="_blank"
                           rel="noopener noreferrer"
                           className="text-purple-200 hover:text-white underline font-semibold"
                         >
@@ -245,42 +245,9 @@ export function GameOver({ distance, score, highScore, hasNFTs, onPlayAgain, onC
                         {" "}to claim
                       </p>
                       <p className="text-purple-300/80 text-xs mt-1">
-                        Would earn {rewardPreview} $DEGEN
+                        Would have earned {rewardPreview} $DEGEN
                       </p>
                     </div>
-                    {/* Submit Score button for non-NFT players */}
-                    {scoreSuccessMessage ? (
-                      <div className="bg-purple-900/60 backdrop-blur-sm rounded-xl p-3 border-2 border-purple-400/50 text-center w-full">
-                        <p className="text-purple-200 font-bold text-sm">
-                          ✅ {scoreSuccessMessage}
-                        </p>
-                      </div>
-                    ) : scoreError ? (
-                      <div className="bg-red-900/60 backdrop-blur-sm rounded-xl p-3 border-2 border-red-400/50 text-center w-full">
-                        <p className="text-red-200 font-bold text-sm">
-                          ❌ {scoreError}
-                        </p>
-                      </div>
-                    ) : (
-                      <Button
-                        type="button"
-                        onClick={handleSubmitScore}
-                        disabled={isSubmitting || hasSubmittedScore}
-                        size="lg"
-                        style={{ position: 'relative', zIndex: 50, pointerEvents: 'auto', maxWidth: '100%', minWidth: 0 }}
-                        className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white font-bold text-sm sm:text-base px-4 py-3 rounded-xl shadow-lg hover:shadow-purple-500/50 transition-all hover:scale-105 border-2 border-purple-300/70 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                      >
-                        <span className="relative z-10 flex items-center justify-center gap-2 text-center break-words">
-                          {isSubmitting ? (
-                            <>⏳ Submitting...</>
-                          ) : hasSubmittedScore ? (
-                            <>✅ Score Submitted</>
-                          ) : (
-                            <span>📊 Submit Score<br />Onchain (Free)</span>
-                          )}
-                        </span>
-                      </Button>
-                    )}
                   </div>
                 ) : null}
               </div>
@@ -305,6 +272,42 @@ export function GameOver({ distance, score, highScore, hasNFTs, onPlayAgain, onC
               </div>
               <div className="text-4xl sm:text-5xl">👑</div>
             </div>
+          </div>
+
+          {/* Submit Score button - separate section for all players */}
+          <div className="relative w-full">
+            {scoreSuccessMessage ? (
+              <div className="bg-purple-900/60 backdrop-blur-sm rounded-xl p-4 border-2 border-purple-400/50 text-center w-full">
+                <p className="text-purple-200 font-bold text-sm">
+                  ✅ {scoreSuccessMessage}
+                </p>
+              </div>
+            ) : scoreError ? (
+              <div className="bg-red-900/60 backdrop-blur-sm rounded-xl p-4 border-2 border-red-400/50 text-center w-full">
+                <p className="text-red-200 font-bold text-sm">
+                  ❌ {scoreError}
+                </p>
+              </div>
+            ) : (
+              <Button
+                type="button"
+                onClick={handleSubmitScore}
+                disabled={isSubmitting || hasSubmittedScore}
+                size="lg"
+                style={{ position: 'relative', zIndex: 50, pointerEvents: 'auto', maxWidth: '100%', minWidth: 0 }}
+                className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white font-bold text-base sm:text-lg px-6 py-4 rounded-xl shadow-lg hover:shadow-purple-500/50 transition-all hover:scale-105 border-2 border-purple-300/70 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              >
+                <span className="relative z-10 flex items-center justify-center gap-2 text-center break-words">
+                  {isSubmitting ? (
+                    <>⏳ Submitting...</>
+                  ) : hasSubmittedScore ? (
+                    <>✅ Score Submitted</>
+                  ) : (
+                    <span>📊 Submit Score Onchain (Free)</span>
+                  )}
+                </span>
+              </Button>
+            )}
           </div>
         </div>
 
