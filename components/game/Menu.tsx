@@ -1,6 +1,8 @@
 import { Button } from "@/components/ui/button"
 import { WalletButton } from "@/components/web3/WalletButton"
 import { useGlobalHighScore } from "@/hooks/useGlobalHighScore"
+import { useTotalDistributed } from "@/hooks/useTotalDistributed"
+import { useUsernameFromAddress } from "@/hooks/useUsernameFromAddress"
 import type { GameState } from "@/lib/game/types"
 
 type MenuProps = {
@@ -9,7 +11,9 @@ type MenuProps = {
 }
 
 export function Menu({ highScore, onStart }: MenuProps) {
-  const { globalHighScore, isLoading } = useGlobalHighScore()
+  const { globalHighScore, highScoreHolder, isLoading: isLoadingScore } = useGlobalHighScore()
+  const { username, isLoading: isLoadingUsername } = useUsernameFromAddress(highScoreHolder)
+  const { totalDistributed, isLoading: isLoadingTotal } = useTotalDistributed()
 
   return (
     <div className="flex flex-col items-center gap-4 sm:gap-6 rounded-xl bg-white/90 p-4 sm:p-8 shadow-2xl backdrop-blur mx-4">
@@ -20,7 +24,25 @@ export function Menu({ highScore, onStart }: MenuProps) {
       />
       <h1 className="text-3xl sm:text-6xl font-bold text-purple-600 text-center">Based Degen Sky</h1>
       <p className="text-sm sm:text-lg text-gray-600 text-center max-w-md">
-        <strong>Fly through obstacles, collect hats, and rack up DEGEN tokens!</strong> Real DEGEN rewards requires a Based Degen NFT. Mint one or buy on secondary market.
+        <strong>Fly through obstacles, collect hats, and rack up DEGEN tokens!</strong> Real DEGEN rewards requires a Based Degen NFT.{" "}
+        <a
+          href="https://farcaster.xyz/miniapps/JGXqJLzLcSNz/the-based-degens"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-purple-600 hover:text-purple-700 underline font-semibold"
+        >
+          Mint one
+        </a>
+        {" "}or buy on{" "}
+        <a
+          href="https://opensea.io/collection/the-based-degens/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-purple-600 hover:text-purple-700 underline font-semibold"
+        >
+          secondary market
+        </a>
+        .
       </p>
       <div className="flex flex-col gap-3 w-full sm:w-auto items-center">
         <WalletButton />
@@ -31,15 +53,27 @@ export function Menu({ highScore, onStart }: MenuProps) {
         >
           Start Game
         </Button>
-        <div className="flex flex-col gap-2 text-center text-sm sm:text-lg">
+        <div className="flex flex-col gap-2 text-center text-sm sm:text-lg w-full">
           {highScore > 0 && (
             <div className="text-gray-700">
-              Your High Score: <span className="font-bold text-purple-600">{highScore}m</span>
+              Personal best score: <span className="font-bold text-purple-600">{highScore}m</span>
             </div>
           )}
-          {!isLoading && globalHighScore > 0 && (
+          {!isLoadingScore && globalHighScore > 0 && (
             <div className="text-gray-700">
-              🌍 Global Record: <span className="font-bold text-purple-600">{globalHighScore}m</span>
+              🏆 Champion score: <span className="font-bold text-purple-600">{globalHighScore}m</span>
+              {isLoadingUsername ? (
+                <span className="text-gray-500 text-xs ml-1">(loading...)</span>
+              ) : username ? (
+                <span className="text-purple-600 font-semibold ml-1">({username})</span>
+              ) : highScoreHolder ? (
+                <span className="text-gray-500 text-xs ml-1">({highScoreHolder.slice(0, 6)}...{highScoreHolder.slice(-4)})</span>
+              ) : null}
+            </div>
+          )}
+          {!isLoadingTotal && (
+            <div className="text-gray-700">
+              🎩 Total DEGEN earned: <span className="font-bold text-purple-600">{totalDistributed > 0 ? totalDistributed.toFixed(2) : "0.00"} $DEGEN</span>
             </div>
           )}
         </div>

@@ -161,3 +161,53 @@ export function cacheUserData(user: NeynarUser) {
     timestamp: Date.now(),
   }))
 }
+
+// Get user data from Neynar API using wallet address
+export async function getUserDataByAddress(address: string): Promise<NeynarUser | null> {
+  if (!NEYNAR_API_KEY) {
+    console.log("⚠️ No Neynar API key found")
+    return null
+  }
+
+  if (!address) {
+    return null
+  }
+
+  try {
+    // Neynar API v2: Get user by address (custody or verified)
+    const url = `https://api.neynar.com/v2/farcaster/user/by_verification?address=${address.toLowerCase()}`
+    
+    const response = await fetch(url, {
+      headers: {
+        "api_key": NEYNAR_API_KEY,
+        "accept": "application/json",
+      },
+    })
+
+    if (response.ok) {
+      const data = await response.json()
+      console.log("📦 Neynar API response (by address):", data)
+      
+      // The API returns { result: { user: {...} } }
+      const user = data.result?.user || data.user
+      
+      if (user?.fid) {
+        console.log(`✅ Found user data for address ${address}`)
+        return {
+          fid: user.fid,
+          username: user.username,
+          display_name: user.display_name,
+          custody_address: user.custody_address,
+          verifications: user.verifications || [],
+        }
+      }
+    } else {
+      const errorText = await response.text()
+      console.error("❌ Neynar API error (by address):", response.status, response.statusText, errorText)
+    }
+  } catch (error) {
+    console.error("❌ Error fetching user data from Neynar by address:", error)
+  }
+
+  return null
+}

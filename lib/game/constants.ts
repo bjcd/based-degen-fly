@@ -1,6 +1,6 @@
 export const BASE_GRAVITY = 0.3
 export const BASE_THRUST = -6
-export const BASE_SPEED = 2.5
+export const BASE_SPEED = 3.75 // Increased by 25% from 3.0 (3.0 * 1.25 = 3.75)
 export const OBSTACLE_WIDTH = 60
 export const GAP_SIZE = 180
 export const COPTER_SIZE = 60 // Increased from 30 to 60 (2x size)
