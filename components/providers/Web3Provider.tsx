@@ -137,6 +137,23 @@ export function Web3Provider({ children }: { children: React.ReactNode }) {
             try {
               await sdk.actions.ready();
               console.log('✅ Farcaster SDK ready() called - splash screen hidden');
+              
+              // Automatically prompt user to add miniapp if not already added
+              try {
+                await sdk.actions.addMiniApp();
+                console.log('✅ Miniapp add prompt shown successfully');
+              } catch (addError: any) {
+                // Handle errors gracefully - app might already be added or user rejected
+                if (addError?.name === 'RejectedByUser') {
+                  console.log('ℹ️ User rejected adding miniapp (or already added)');
+                } else if (addError?.name === 'InvalidDomainManifestJson') {
+                  console.warn('⚠️ Domain mismatch - cannot add miniapp:', addError);
+                } else {
+                  console.log('ℹ️ Miniapp may already be added or error occurred:', addError?.message || addError);
+                }
+                // Continue anyway - this is not a critical error
+              }
+              
               setIsReady(true);
               return;
             } catch (sdkError) {

@@ -3,6 +3,7 @@ import { useClaimRewards } from "@/hooks/useClaimRewards"
 import { useLifetimeRewards } from "@/hooks/useLifetimeRewards"
 import { useSubmitScore } from "@/hooks/useSubmitScore"
 import { useGlobalHighScore } from "@/hooks/useGlobalHighScore"
+import { useUsernameFromAddress } from "@/hooks/useUsernameFromAddress"
 import { useState, useEffect } from "react"
 
 type GameOverProps = {
@@ -35,7 +36,8 @@ export function GameOver({ distance, score, highScore, hasNFTs, onPlayAgain, onC
   const { claimRewards, isClaiming, isSuccess, error, successMessage } = useClaimRewards()
   const { submitScore, isSubmitting, isSuccess: isScoreSubmitted, error: scoreError, successMessage: scoreSuccessMessage } = useSubmitScore()
   const { lifetimeRewards } = useLifetimeRewards()
-  const { globalHighScore } = useGlobalHighScore()
+  const { globalHighScore, highScoreHolder } = useGlobalHighScore()
+  const { username, isLoading: isLoadingUsername } = useUsernameFromAddress(highScoreHolder)
   const [hasClaimed, setHasClaimed] = useState(false)
   const [hasSubmittedScore, setHasSubmittedScore] = useState(false)
 
@@ -265,7 +267,14 @@ export function GameOver({ distance, score, highScore, hasNFTs, onPlayAgain, onC
                 </p>
                 {safeGlobalHighScore > 0 && (
                   <p className="text-xs sm:text-sm text-yellow-200/70 mt-2 font-medium">
-                    Global Record: {safeGlobalHighScore}m
+                    🏆 Champion score: {safeGlobalHighScore}m
+                    {isLoadingUsername ? (
+                      <span className="text-yellow-300/60 text-xs ml-1">(loading...)</span>
+                    ) : username ? (
+                      <span className="text-yellow-300 font-semibold ml-1">({username})</span>
+                    ) : highScoreHolder ? (
+                      <span className="text-yellow-300/60 text-xs ml-1">({highScoreHolder.slice(0, 6)}...{highScoreHolder.slice(-4)})</span>
+                    ) : null}
                   </p>
                 )}
               </div>
