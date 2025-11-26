@@ -12,7 +12,7 @@ type MenuProps = {
 
 export function Menu({ highScore, onStart }: MenuProps) {
   const { globalHighScore, highScoreHolder, isLoading: isLoadingScore } = useGlobalHighScore()
-  const { username, isLoading: isLoadingUsername } = useUsernameFromAddress(highScoreHolder)
+  const { username, pfpUrl, isLoading: isLoadingUsername } = useUsernameFromAddress(highScoreHolder)
   const { totalDistributed, isLoading: isLoadingTotal } = useTotalDistributed()
 
   return (
@@ -65,7 +65,17 @@ export function Menu({ highScore, onStart }: MenuProps) {
               {isLoadingUsername ? (
                 <span className="text-gray-500 text-xs ml-1">(loading...)</span>
               ) : username ? (
-                <span className="text-purple-600 font-semibold ml-1">({username})</span>
+                <span className="text-purple-600 font-semibold ml-1 inline-flex items-center gap-1.5">
+                  (
+                  {pfpUrl && (
+                    <img 
+                      src={pfpUrl} 
+                      alt={username}
+                      className="w-4 h-4 rounded-full object-cover"
+                    />
+                  )}
+                  @{username})
+                </span>
               ) : highScoreHolder ? (
                 <span className="text-gray-500 text-xs ml-1">({highScoreHolder.slice(0, 6)}...{highScoreHolder.slice(-4)})</span>
               ) : null}

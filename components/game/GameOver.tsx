@@ -37,7 +37,7 @@ export function GameOver({ distance, score, highScore, hasNFTs, onPlayAgain, onC
   const { submitScore, isSubmitting, isSuccess: isScoreSubmitted, error: scoreError, successMessage: scoreSuccessMessage } = useSubmitScore()
   const { lifetimeRewards } = useLifetimeRewards()
   const { globalHighScore, highScoreHolder } = useGlobalHighScore()
-  const { username, isLoading: isLoadingUsername } = useUsernameFromAddress(highScoreHolder)
+  const { username, pfpUrl, isLoading: isLoadingUsername } = useUsernameFromAddress(highScoreHolder)
   const [hasClaimed, setHasClaimed] = useState(false)
   const [hasSubmittedScore, setHasSubmittedScore] = useState(false)
 
@@ -271,7 +271,17 @@ export function GameOver({ distance, score, highScore, hasNFTs, onPlayAgain, onC
                     {isLoadingUsername ? (
                       <span className="text-yellow-300/60 text-xs ml-1">(loading...)</span>
                     ) : username ? (
-                      <span className="text-yellow-300 font-semibold ml-1">({username})</span>
+                      <span className="text-yellow-300 font-semibold ml-1 inline-flex items-center gap-1.5">
+                        (
+                        {pfpUrl && (
+                          <img 
+                            src={pfpUrl} 
+                            alt={username}
+                            className="w-4 h-4 rounded-full object-cover"
+                          />
+                        )}
+                        @{username})
+                      </span>
                     ) : highScoreHolder ? (
                       <span className="text-yellow-300/60 text-xs ml-1">({highScoreHolder.slice(0, 6)}...{highScoreHolder.slice(-4)})</span>
                     ) : null}
