@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { getUserDataByAddress } from "@/lib/web3/neynar"
+import { fetchFarcasterProfile } from "@/lib/farcaster-profiles"
 
 export function useUsernameFromAddress(address: `0x${string}` | undefined) {
   const [username, setUsername] = useState<string | null>(null)
@@ -16,10 +16,10 @@ export function useUsernameFromAddress(address: `0x${string}` | undefined) {
     setIsLoading(true)
     setError(null)
 
-    getUserDataByAddress(address)
-      .then((user) => {
-        if (user?.username) {
-          setUsername(user.username)
+    fetchFarcasterProfile(address)
+      .then((profile) => {
+        if (profile?.username) {
+          setUsername(profile.username)
         } else {
           setUsername(null)
         }

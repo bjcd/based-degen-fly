@@ -225,12 +225,15 @@ export function GameOver({ distance, score, highScore, hasNFTs, onPlayAgain, onC
                   <div className="flex flex-col items-end gap-2 min-w-0 w-full relative z-40">
                     <div className="bg-purple-900/60 backdrop-blur-sm rounded-xl p-3 border-2 border-purple-400/50 text-center min-w-0 w-full">
                       <p className="text-purple-200 font-semibold text-sm leading-tight">
+                        You missed out on a {rewardPreview} $DEGEN reward 😢
+                      </p>
+                      <p className="text-purple-300/80 text-xs mt-1">
                         🔒{" "}
                         <a
                           href="https://farcaster.xyz/miniapps/JGXqJLzLcSNz/the-based-degens"
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-purple-200 hover:text-white underline font-semibold"
+                          className="text-purple-300/80 hover:text-white underline font-semibold"
                         >
                           Mint a Based Degen
                         </a>
@@ -239,14 +242,11 @@ export function GameOver({ distance, score, highScore, hasNFTs, onPlayAgain, onC
                           href="https://opensea.io/collection/the-based-degens/"
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-purple-200 hover:text-white underline font-semibold"
+                          className="text-purple-300/80 hover:text-white underline font-semibold"
                         >
                           OpenSea
                         </a>
                         {" "}to claim
-                      </p>
-                      <p className="text-purple-300/80 text-xs mt-1">
-                        Would have earned {rewardPreview} $DEGEN
                       </p>
                     </div>
                   </div>
