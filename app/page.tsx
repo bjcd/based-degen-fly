@@ -48,13 +48,16 @@ export default function CopterGame() {
       // Auto-select first 4 owned traits for NFT holders
       const traitsToSelect = ownedTraits.slice(0, 4)
       setSelectedTraits(traitsToSelect)
+    } else if (isConnected && hasNFTs && (!ownedTraits || ownedTraits.length === 0)) {
+      // If they own NFTs but have no traits, clear any selected traits
+      setSelectedTraits([])
     } else if (!isConnected && selectedTraits.length === 0) {
       // If not connected, select first 4 unlocked traits (for preview) - only if nothing selected
       const unlockedTraits = TRAITS.filter((t) => t.unlocked).slice(0, 4)
       setSelectedTraits(unlockedTraits.map((t) => t.id))
     }
     // If connected but no NFTs, don't auto-select - user can choose
-  }, [ownedTraits, isConnected])
+  }, [ownedTraits, isConnected, hasNFTs])
   const [canvasDimensions, setCanvasDimensions] = useState({
     width: CANVAS_WIDTH_DESKTOP,
     height: CANVAS_HEIGHT_DESKTOP,
@@ -295,6 +298,7 @@ export default function CopterGame() {
             onTraitToggle={toggleTrait}
             onStart={() => setGameState("playing")}
             ownedTraits={isConnected ? ownedTraits : undefined}
+            hasNFTs={isConnected ? hasNFTs : false}
             requiresWallet={isConnected}
             loadingTraits={traitsLoading}
           />

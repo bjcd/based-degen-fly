@@ -7,20 +7,26 @@ type TraitSelectorProps = {
   onTraitToggle: (traitId: number) => void
   onStart: () => void
   ownedTraits?: number[]
+  hasNFTs?: boolean
   requiresWallet?: boolean
   loadingTraits?: boolean
 }
 
-export function TraitSelector({ selectedTraits, onTraitToggle, onStart, ownedTraits, requiresWallet, loadingTraits }: TraitSelectorProps) {
+export function TraitSelector({ selectedTraits, onTraitToggle, onStart, ownedTraits, hasNFTs, requiresWallet, loadingTraits }: TraitSelectorProps) {
   // Show all unlocked traits
   const availableTraits = TRAITS.filter((t) => t.unlocked)
   const isTraitOwned = (traitId: number) => {
-    // If wallet not required, all unlocked traits are available
+    // If wallet not required, all unlocked traits are available (for preview)
     if (!requiresWallet) return true
-    // If wallet required but no owned traits, allow all unlocked traits (for non-NFT users)
-    if (requiresWallet && (!ownedTraits || ownedTraits.length === 0)) return true
+    // If wallet required and they own NFTs but have no traits, disallow all traits
+    if (requiresWallet && hasNFTs && (!ownedTraits || ownedTraits.length === 0)) return false
+    // If wallet required but they don't own NFTs, allow all unlocked traits (for preview)
+    if (requiresWallet && !hasNFTs && (!ownedTraits || ownedTraits.length === 0)) return true
     // If wallet required and has owned traits, only allow owned traits
-    return ownedTraits.includes(traitId)
+    if (requiresWallet && ownedTraits && ownedTraits.length > 0) {
+      return ownedTraits.includes(traitId)
+    }
+    return false
   }
 
   return (
@@ -31,9 +37,14 @@ export function TraitSelector({ selectedTraits, onTraitToggle, onStart, ownedTra
           🔄 Loading your Power traits...
         </p>
       )}
-      {!loadingTraits && requiresWallet && ownedTraits && ownedTraits.length === 0 && (
+      {!loadingTraits && requiresWallet && hasNFTs && (!ownedTraits || ownedTraits.length === 0) && (
         <p className="text-xs sm:text-base text-purple-600 text-center">
-          Select up to 4 Power traits to use in the game
+          Your Based Degen NFT doesn't have any Power traits. You can still play and claim rewards, but no traits will be active.
+        </p>
+      )}
+      {!loadingTraits && requiresWallet && !hasNFTs && (!ownedTraits || ownedTraits.length === 0) && (
+        <p className="text-xs sm:text-base text-purple-600 text-center">
+          Select up to 4 Power traits to use in the game (preview mode)
         </p>
       )}
       {!loadingTraits && requiresWallet && ownedTraits && ownedTraits.length > 0 && (

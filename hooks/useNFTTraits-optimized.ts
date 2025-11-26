@@ -209,11 +209,15 @@ export function useNFTTraitsOptimized() {
     }
   }, [isConnected, address, balanceLoading, balance, hasLoaded])
 
+  // hasNFTs should be based on actual NFT ownership (balance), not traits
+  // This allows NFT owners without traits to still claim rewards
+  const hasNFTs = balance !== undefined && balance > 0n
+
   return {
     ownedTraits,
     nftImageUrl,
     loading: loading || balanceLoading,
-    hasNFTs: ownedTraits.length > 0,
+    hasNFTs,
     nftCount: balance ? Number(balance) : 0,
   }
 }
