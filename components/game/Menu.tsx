@@ -4,6 +4,8 @@ import { useGlobalHighScore } from "@/hooks/useGlobalHighScore"
 import { useTotalDistributed } from "@/hooks/useTotalDistributed"
 import { useUsernameFromAddress } from "@/hooks/useUsernameFromAddress"
 import type { GameState } from "@/lib/game/types"
+import { sdk } from "@farcaster/miniapp-sdk"
+import { useState, useEffect } from "react"
 
 type MenuProps = {
   highScore: number
@@ -14,6 +16,37 @@ export function Menu({ highScore, onStart }: MenuProps) {
   const { globalHighScore, highScoreHolder, isLoading: isLoadingScore } = useGlobalHighScore()
   const { username, pfpUrl, isLoading: isLoadingUsername } = useUsernameFromAddress(highScoreHolder)
   const { totalDistributed, isLoading: isLoadingTotal } = useTotalDistributed()
+  const [isInFarcaster, setIsInFarcaster] = useState(false)
+
+  useEffect(() => {
+    const checkFarcaster = async () => {
+      try {
+        const inMiniApp = await sdk.isInMiniApp()
+        setIsInFarcaster(inMiniApp)
+      } catch (error) {
+        console.warn("⚠️ Error checking Farcaster environment:", error)
+        setIsInFarcaster(false)
+      }
+    }
+    checkFarcaster()
+  }, [])
+
+  const handleMintClick = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    if (isInFarcaster) {
+      try {
+        await sdk.actions.openUrl({
+          url: 'https://farcaster.xyz/?launchFrameUrl=https%3A%2F%2Ffly.thebaseddegens.xyz'
+        })
+      } catch (error) {
+        console.error("Error opening mint URL:", error)
+        // Fallback to regular link
+        window.open('https://farcaster.xyz/miniapps/JGXqJLzLcSNz/the-based-degens', '_blank')
+      }
+    } else {
+      window.open('https://farcaster.xyz/miniapps/JGXqJLzLcSNz/the-based-degens', '_blank')
+    }
+  }
 
   return (
     <div className="flex flex-col items-center gap-4 sm:gap-6 rounded-xl bg-white/90 p-4 sm:p-8 shadow-2xl backdrop-blur mx-4">
@@ -25,14 +58,12 @@ export function Menu({ highScore, onStart }: MenuProps) {
       <h1 className="text-3xl sm:text-6xl font-bold text-purple-600 text-center">Based Degen Sky</h1>
       <p className="text-sm sm:text-lg text-gray-600 text-center max-w-md">
         <strong>Fly through obstacles, collect hats, and rack up DEGEN tokens!</strong> Real DEGEN rewards requires a Based Degen NFT.{" "}
-        <a
-          href="https://farcaster.xyz/miniapps/JGXqJLzLcSNz/the-based-degens"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-purple-600 hover:text-purple-700 underline font-semibold"
+        <button
+          onClick={handleMintClick}
+          className="text-purple-600 hover:text-purple-700 underline font-semibold bg-transparent border-none p-0 cursor-pointer"
         >
           Mint one
-        </a>
+        </button>
         {" "}or buy on{" "}
         <a
           href="https://opensea.io/collection/the-based-degens/"

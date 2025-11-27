@@ -5,6 +5,7 @@ import { useSubmitScore } from "@/hooks/useSubmitScore"
 import { useGlobalHighScore } from "@/hooks/useGlobalHighScore"
 import { useUsernameFromAddress } from "@/hooks/useUsernameFromAddress"
 import { useState, useEffect } from "react"
+import { sdk } from "@farcaster/miniapp-sdk"
 
 type GameOverProps = {
   distance: number
@@ -40,6 +41,37 @@ export function GameOver({ distance, score, highScore, hasNFTs, onPlayAgain, onC
   const { username, pfpUrl, isLoading: isLoadingUsername } = useUsernameFromAddress(highScoreHolder)
   const [hasClaimed, setHasClaimed] = useState(false)
   const [hasSubmittedScore, setHasSubmittedScore] = useState(false)
+  const [isInFarcaster, setIsInFarcaster] = useState(false)
+
+  useEffect(() => {
+    const checkFarcaster = async () => {
+      try {
+        const inMiniApp = await sdk.isInMiniApp()
+        setIsInFarcaster(inMiniApp)
+      } catch (error) {
+        console.warn("⚠️ Error checking Farcaster environment:", error)
+        setIsInFarcaster(false)
+      }
+    }
+    checkFarcaster()
+  }, [])
+
+  const handleMintClick = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    if (isInFarcaster) {
+      try {
+        await sdk.actions.openUrl({
+          url: 'https://farcaster.xyz/?launchFrameUrl=https%3A%2F%2Ffly.thebaseddegens.xyz'
+        })
+      } catch (error) {
+        console.error("Error opening mint URL:", error)
+        // Fallback to regular link
+        window.open('https://farcaster.xyz/miniapps/JGXqJLzLcSNz/the-based-degens', '_blank')
+      }
+    } else {
+      window.open('https://farcaster.xyz/miniapps/JGXqJLzLcSNz/the-based-degens', '_blank')
+    }
+  }
 
   // Ensure lifetimeRewards is a number
   const safeLifetimeRewards = typeof lifetimeRewards === 'number' ? lifetimeRewards : 0
@@ -229,14 +261,12 @@ export function GameOver({ distance, score, highScore, hasNFTs, onPlayAgain, onC
                       </p>
                       <p className="text-purple-300/80 text-xs mt-1">
                         🔒{" "}
-                        <a
-                          href="https://farcaster.xyz/miniapps/JGXqJLzLcSNz/the-based-degens"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-purple-300/80 hover:text-white underline font-semibold"
+                        <button
+                          onClick={handleMintClick}
+                          className="text-purple-300/80 hover:text-white underline font-semibold bg-transparent border-none p-0 cursor-pointer"
                         >
                           Mint a Based Degen
-                        </a>
+                        </button>
                         {" "}or buy on{" "}
                         <a
                           href="https://opensea.io/collection/the-based-degens/"
