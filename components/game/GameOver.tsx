@@ -60,16 +60,20 @@ export function GameOver({ distance, score, highScore, hasNFTs, onPlayAgain, onC
     e.preventDefault()
     if (isInFarcaster) {
       try {
+        console.log("🚀 Opening Based Degen mini app...")
         await sdk.actions.openMiniApp({
           url: 'https://farcaster.xyz/miniapps/JGXqJLzLcSNz/the-based-degens'
         })
         // Navigation successful - this app will close
+        console.log("✅ Mini app opened successfully")
       } catch (error) {
-        console.error("Error opening miniapp:", error)
+        console.error("❌ Error opening mini app:", error)
         // Fallback to regular link
+        console.log("🔄 Falling back to window.open...")
         window.open('https://farcaster.xyz/miniapps/JGXqJLzLcSNz/the-based-degens', '_blank')
       }
     } else {
+      console.log("🌐 Not in Farcaster, using window.open...")
       window.open('https://farcaster.xyz/miniapps/JGXqJLzLcSNz/the-based-degens', '_blank')
     }
   }
