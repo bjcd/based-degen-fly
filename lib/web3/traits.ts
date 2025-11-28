@@ -44,22 +44,30 @@ export function parseNFTTraits(metadata: NFTMetadata): number[] {
 
   const unmatchedTraits: string[] = []
 
+  // Create case-insensitive lookup map
+  const caseInsensitiveMapping: Record<string, number> = {}
+  Object.keys(TRAIT_MAPPING).forEach(key => {
+    caseInsensitiveMapping[key.toLowerCase()] = TRAIT_MAPPING[key]
+  })
+
   attributes.forEach((attr) => {
     const traitType = String(attr.trait_type || "")
     const traitValue = String(attr.value || "")
     
-    // Try matching by trait_type first, then by value
-    let traitId = TRAIT_MAPPING[traitType]
+    // Try matching by trait_type first (case-insensitive), then by value (case-insensitive)
+    let traitId = caseInsensitiveMapping[traitType.toLowerCase()]
     if (traitId === undefined) {
-      traitId = TRAIT_MAPPING[traitValue]
+      traitId = caseInsensitiveMapping[traitValue.toLowerCase()]
     }
 
     if (traitId !== undefined) {
+      // Find the original key name for display
+      const originalKey = Object.keys(TRAIT_MAPPING).find(k => TRAIT_MAPPING[k] === traitId)
       console.log("✅ Matched trait:", {
         traitType,
         traitValue,
         traitId,
-        traitName: Object.keys(TRAIT_MAPPING).find(k => TRAIT_MAPPING[k] === traitId),
+        traitName: originalKey,
       })
       traits.push(traitId)
     } else {
