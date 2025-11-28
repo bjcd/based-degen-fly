@@ -10,7 +10,11 @@ const isMainnet = chainId === 8453 // Base mainnet chain ID
 const selectedChain = isMainnet ? base : baseSepolia
 
 // Alchemy RPC as PRIMARY (if API key is provided) - more reliable than public RPCs
-const alchemyApiKey = process.env.NEXT_PUBLIC_ALCHEMY_API_KEY
+// Extract just the API key from the env var (handle both full URL and just key)
+const alchemyApiKeyRaw = process.env.NEXT_PUBLIC_ALCHEMY_API_KEY || ""
+const alchemyApiKey = alchemyApiKeyRaw.includes("/v2/") 
+  ? alchemyApiKeyRaw.split("/v2/")[1]?.split("/")[0] || alchemyApiKeyRaw
+  : alchemyApiKeyRaw
 const alchemyMainnetUrl = alchemyApiKey ? `https://base-mainnet.g.alchemy.com/v2/${alchemyApiKey}` : null
 const alchemySepoliaUrl = alchemyApiKey ? `https://base-sepolia.g.alchemy.com/v2/${alchemyApiKey}` : null
 
