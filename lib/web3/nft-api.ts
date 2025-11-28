@@ -1,8 +1,18 @@
 // Use Alchemy NFT API for efficient NFT ownership queries
 // This avoids rate limiting from too many blockchain requests
 
-const ALCHEMY_API_KEY = process.env.NEXT_PUBLIC_ALCHEMY_API_KEY || ""
-const BASE_SEPOLIA_NETWORK = "base-sepolia"
+// Extract just the API key from the env var (handle both full URL and just key)
+const alchemyApiKeyRaw = process.env.NEXT_PUBLIC_ALCHEMY_API_KEY || ""
+// If it's a full URL like "https://base-mainnet.g.alchemy.com/v2/KEY", extract just the key
+// Otherwise, use it as-is
+const ALCHEMY_API_KEY = alchemyApiKeyRaw.includes("/v2/") 
+  ? alchemyApiKeyRaw.split("/v2/")[1]?.split("/")[0] || alchemyApiKeyRaw
+  : alchemyApiKeyRaw
+
+// Determine network based on chain ID
+const chainId = Number.parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || "8453")
+const isMainnet = chainId === 8453
+const ALCHEMY_NETWORK = isMainnet ? "base-mainnet" : "base-sepolia"
 
 // Alternative: Use a public NFT API service
 // Options: Alchemy (free tier), Moralis, OpenSea API, etc.
@@ -101,12 +111,17 @@ export async function getOwnedNFTs(
     // Check if user owns the NFT with token ID = FID
     if (shouldCheckOwnership) {
       try {
-        const { createPublicClient, http } = await import("viem")
-        const { baseSepolia } = await import("viem/chains")
+        const { createPublicClient } = await import("viem")
+        const { base, baseSepolia } = await import("viem/chains")
+        const { config } = await import("./config")
+        
+        const selectedChain = isMainnet ? base : baseSepolia
+        // Use the wagmi config's transport (which includes Alchemy as primary)
+        const transport = config.transports[selectedChain.id]
         
         const publicClient = createPublicClient({
-          chain: baseSepolia,
-          transport: http(process.env.NEXT_PUBLIC_RPC_URL || "https://sepolia.base.org"),
+          chain: selectedChain,
+          transport,
         })
 
         const owner = await publicClient.readContract({
@@ -165,8 +180,8 @@ export async function getOwnedNFTs(
   try {
     // Try Alchemy API first if API key is available
     if (ALCHEMY_API_KEY) {
-      const url = `https://${BASE_SEPOLIA_NETWORK}.g.alchemy.com/nft/v3/${ALCHEMY_API_KEY}/getNFTs?owner=${ownerAddress}&contractAddresses[]=${contractAddress}&withMetadata=true`
-      console.log("🔑 Using Alchemy API...")
+      const url = `https://${ALCHEMY_NETWORK}.g.alchemy.com/nft/v3/${ALCHEMY_API_KEY}/getNFTs?owner=${ownerAddress}&contractAddresses[]=${contractAddress}&withMetadata=true`
+      console.log(`🔑 Using Alchemy API (${ALCHEMY_NETWORK})...`)
       
       const response = await fetch(url)
       if (response.ok) {
@@ -199,15 +214,18 @@ export async function getOwnedNFTs(
     
     try {
       // Use viem to query Transfer events
-      const { createPublicClient, http, parseAbiItem } = await import("viem")
-      const { baseSepolia } = await import("viem/chains")
+      const { createPublicClient, parseAbiItem } = await import("viem")
+      const { base, baseSepolia } = await import("viem/chains")
+      const { config } = await import("./config")
       
-      const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || "https://sepolia.base.org"
-      console.log(`🔗 Connecting to RPC: ${rpcUrl}`)
+      const selectedChain = isMainnet ? base : baseSepolia
+      // Use the wagmi config's transport (which includes Alchemy as primary)
+      const transport = config.transports[selectedChain.id]
+      console.log(`🔗 Using wagmi config transport for ${selectedChain.name}...`)
       
       const publicClient = createPublicClient({
-        chain: baseSepolia,
-        transport: http(rpcUrl),
+        chain: selectedChain,
+        transport,
       })
 
       // Query Transfer events where 'to' is the owner
@@ -285,12 +303,17 @@ export async function getOwnedNFTs(
     // This is RPC-intensive but necessary when other methods fail
     console.log("🔄 Starting comprehensive token ID range search...")
     try {
-      const { createPublicClient, http } = await import("viem")
-      const { baseSepolia } = await import("viem/chains")
+      const { createPublicClient } = await import("viem")
+      const { base, baseSepolia } = await import("viem/chains")
+      const { config } = await import("./config")
+      
+      const selectedChain = isMainnet ? base : baseSepolia
+      // Use the wagmi config's transport (which includes Alchemy as primary)
+      const transport = config.transports[selectedChain.id]
       
       const publicClient = createPublicClient({
-        chain: baseSepolia,
-        transport: http(process.env.NEXT_PUBLIC_RPC_URL || "https://sepolia.base.org"),
+        chain: selectedChain,
+        transport,
       })
 
       // Search ranges in batches
