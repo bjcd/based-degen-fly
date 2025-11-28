@@ -37,9 +37,12 @@ export function parseNFTTraits(metadata: NFTMetadata): number[] {
   const attributes = metadata.attributes || metadata.traits || []
 
   console.log("🔍 Parsing traits from metadata:", {
+    totalAttributes: attributes.length,
     attributes,
     metadataKeys: Object.keys(metadata),
   })
+
+  const unmatchedTraits: string[] = []
 
   attributes.forEach((attr) => {
     const traitType = String(attr.trait_type || "")
@@ -51,19 +54,36 @@ export function parseNFTTraits(metadata: NFTMetadata): number[] {
       traitId = TRAIT_MAPPING[traitValue]
     }
 
-    console.log("🔎 Checking trait:", {
-      traitType,
-      traitValue,
-      found: traitId !== undefined,
-      traitId,
-    })
-
     if (traitId !== undefined) {
+      console.log("✅ Matched trait:", {
+        traitType,
+        traitValue,
+        traitId,
+        traitName: Object.keys(TRAIT_MAPPING).find(k => TRAIT_MAPPING[k] === traitId),
+      })
       traits.push(traitId)
+    } else {
+      unmatchedTraits.push(`${traitType}: ${traitValue}`)
+      console.log("⚠️ Unmatched trait (not in TRAIT_MAPPING):", {
+        traitType,
+        traitValue,
+        availableMappings: Object.keys(TRAIT_MAPPING),
+      })
     }
   })
 
-  console.log("✅ Parsed traits:", traits)
+  console.log("✅ Parsed traits:", {
+    matched: traits,
+    matchedCount: traits.length,
+    unmatched: unmatchedTraits,
+    unmatchedCount: unmatchedTraits.length,
+    totalAttributes: attributes.length,
+  })
+  
+  if (unmatchedTraits.length > 0) {
+    console.log("💡 Tip: Add these traits to TRAIT_MAPPING if they should be recognized:", unmatchedTraits)
+  }
+
   return traits
 }
 
