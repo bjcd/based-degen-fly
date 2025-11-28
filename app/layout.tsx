@@ -57,7 +57,7 @@ export const metadata: Metadata = {
           type: "launch_frame", // Use "launch_frame" for backward compatibility
           name: "Based Degen Sky",
           url: siteUrl,
-          splashImageUrl: `${siteUrl}/miniapp-icon-large.png`,
+          splashImageUrl: `${siteUrl}/icon.png`,
           splashBackgroundColor: "#7c3aed",
         },
       },
