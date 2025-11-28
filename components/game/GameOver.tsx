@@ -60,11 +60,12 @@ export function GameOver({ distance, score, highScore, hasNFTs, onPlayAgain, onC
     e.preventDefault()
     if (isInFarcaster) {
       try {
-        await sdk.actions.openUrl({
-          url: 'https://farcaster.xyz/?launchFrameUrl=https%3A%2F%2Ffly.thebaseddegens.xyz'
+        await sdk.actions.openMiniApp({
+          url: 'https://farcaster.xyz/miniapps/JGXqJLzLcSNz/the-based-degens'
         })
+        // Navigation successful - this app will close
       } catch (error) {
-        console.error("Error opening mint URL:", error)
+        console.error("Error opening miniapp:", error)
         // Fallback to regular link
         window.open('https://farcaster.xyz/miniapps/JGXqJLzLcSNz/the-based-degens', '_blank')
       }
