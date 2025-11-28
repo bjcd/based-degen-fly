@@ -28,11 +28,13 @@ NEXT_PUBLIC_DEGEN_REWARD_PER_HAT=1000000000000000000  # 1 DEGEN (18 decimals)
 # This is for backend signing of reward claims
 VERIFIER_PRIVATE_KEY=your_verifier_private_key_here
 
-# Neynar API (for Farcaster integration)
+# Neynar API (for Farcaster integration - server-side only)
 NEYNAR_API_KEY=your_neynar_api_key_here
 
-# Alchemy API (optional, for NFT fetching)
-ALCHEMY_API_KEY=your_alchemy_api_key_here
+# Alchemy API (for RPC and NFT fetching - client-side, exposed to browser)
+# ⚠️ This will be exposed to the client, but Alchemy API keys are safe to expose
+# Set this to use Alchemy as the PRIMARY RPC provider (more reliable than public RPCs)
+NEXT_PUBLIC_ALCHEMY_API_KEY=your_alchemy_api_key_here
 ```
 
 ## Important Notes

@@ -9,36 +9,39 @@ const isMainnet = chainId === 8453 // Base mainnet chain ID
 
 const selectedChain = isMainnet ? base : baseSepolia
 
-const primaryRpcUrl = process.env.NEXT_PUBLIC_RPC_URL || (isMainnet ? "https://mainnet.base.org" : "https://sepolia.base.org")
-const fallbackRpcUrl = process.env.NEXT_PUBLIC_RPC_URL_ALT || (isMainnet ? "https://base-rpc.publicnode.com" : "https://base-sepolia-rpc.publicnode.com")
-
-// Alchemy RPC as third fallback (if API key is provided)
-const alchemyApiKey = process.env.ALCHEMY_API_KEY
+// Alchemy RPC as PRIMARY (if API key is provided) - more reliable than public RPCs
+const alchemyApiKey = process.env.NEXT_PUBLIC_ALCHEMY_API_KEY
 const alchemyMainnetUrl = alchemyApiKey ? `https://base-mainnet.g.alchemy.com/v2/${alchemyApiKey}` : null
 const alchemySepoliaUrl = alchemyApiKey ? `https://base-sepolia.g.alchemy.com/v2/${alchemyApiKey}` : null
 
-// Build transport for Base mainnet: primary -> fallback -> Alchemy (if available)
-const mainnetUrls = [
-  { url: isMainnet ? primaryRpcUrl : "https://mainnet.base.org", timeout: 10000, retryCount: 1 },
-  { url: isMainnet ? fallbackRpcUrl : "https://base-rpc.publicnode.com", timeout: 10000, retryCount: 1 },
-]
+// Fallback RPC URLs (used when Alchemy is not available or as additional fallbacks)
+const primaryRpcUrl = process.env.NEXT_PUBLIC_RPC_URL || (isMainnet ? "https://mainnet.base.org" : "https://sepolia.base.org")
+const fallbackRpcUrl = process.env.NEXT_PUBLIC_RPC_URL_ALT || (isMainnet ? "https://base-rpc.publicnode.com" : "https://base-sepolia-rpc.publicnode.com")
+
+// Build transport for Base mainnet: Alchemy (if available) -> primary -> fallback
+const mainnetUrls = []
 if (alchemyMainnetUrl) {
   mainnetUrls.push({ url: alchemyMainnetUrl, timeout: 10000, retryCount: 1 })
 }
+mainnetUrls.push(
+  { url: isMainnet ? primaryRpcUrl : "https://mainnet.base.org", timeout: 10000, retryCount: 1 },
+  { url: isMainnet ? fallbackRpcUrl : "https://base-rpc.publicnode.com", timeout: 10000, retryCount: 1 }
+)
 const mainnetTransport = fallback(
   mainnetUrls.map(({ url, timeout, retryCount }) =>
     http(url, { timeout, retryCount })
   )
 )
 
-// Build transport for Base Sepolia: primary -> fallback -> Alchemy (if available)
-const sepoliaUrls = [
-  { url: isMainnet ? "https://sepolia.base.org" : primaryRpcUrl, timeout: 10000, retryCount: 1 },
-  { url: isMainnet ? "https://base-sepolia-rpc.publicnode.com" : fallbackRpcUrl, timeout: 10000, retryCount: 1 },
-]
+// Build transport for Base Sepolia: Alchemy (if available) -> primary -> fallback
+const sepoliaUrls = []
 if (alchemySepoliaUrl) {
   sepoliaUrls.push({ url: alchemySepoliaUrl, timeout: 10000, retryCount: 1 })
 }
+sepoliaUrls.push(
+  { url: isMainnet ? "https://sepolia.base.org" : primaryRpcUrl, timeout: 10000, retryCount: 1 },
+  { url: isMainnet ? "https://base-sepolia-rpc.publicnode.com" : fallbackRpcUrl, timeout: 10000, retryCount: 1 }
+)
 const sepoliaTransport = fallback(
   sepoliaUrls.map(({ url, timeout, retryCount }) =>
     http(url, { timeout, retryCount })
@@ -62,9 +65,10 @@ console.log("🔧 Wagmi config:", {
   chainId: selectedChain.id,
   chainName: selectedChain.name,
   isMainnet,
-  primaryRpcUrl,
-  fallbackRpcUrl,
   alchemyEnabled: !!alchemyApiKey,
+  alchemyPrimary: !!alchemyApiKey,
+  primaryRpcUrl: alchemyApiKey ? (isMainnet ? alchemyMainnetUrl : alchemySepoliaUrl) : primaryRpcUrl,
+  fallbackRpcUrl,
 })
 
 // NFT Contract (Based Degen)

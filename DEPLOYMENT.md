@@ -55,7 +55,10 @@ Vercel is the recommended deployment platform for this Next.js application. It p
    # Backend/Server-side (Server-side only - not exposed to client)
    VERIFIER_PRIVATE_KEY=your_verifier_private_key
    NEYNAR_API_KEY=your_neynar_api_key
-   ALCHEMY_API_KEY=your_alchemy_api_key (optional)
+   
+   # Alchemy API (Client-side - exposed to browser, but safe to expose)
+   # Set this to use Alchemy as the PRIMARY RPC provider (more reliable than public RPCs)
+   NEXT_PUBLIC_ALCHEMY_API_KEY=your_alchemy_api_key (optional but recommended)
    ```
 
    **Important**: 
