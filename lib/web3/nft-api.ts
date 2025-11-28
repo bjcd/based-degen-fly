@@ -14,6 +14,37 @@ const chainId = Number.parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || "8453")
 const isMainnet = chainId === 8453
 const ALCHEMY_NETWORK = isMainnet ? "base-mainnet" : "base-sepolia"
 
+// Helper function to create transport with same logic as config.ts
+async function createTransport(chainId: number) {
+  const { http, fallback } = await import("viem")
+  const isMainnetChain = chainId === 8453
+  
+  const alchemyApiKeyRaw = process.env.NEXT_PUBLIC_ALCHEMY_API_KEY || ""
+  // Extract just the API key (handle both full URL and just key)
+  const alchemyApiKey = alchemyApiKeyRaw.includes("/v2/") 
+    ? alchemyApiKeyRaw.split("/v2/")[1]?.split("/")[0] || alchemyApiKeyRaw
+    : alchemyApiKeyRaw
+  
+  const alchemyMainnetUrl = alchemyApiKey ? `https://base-mainnet.g.alchemy.com/v2/${alchemyApiKey}` : null
+  const alchemySepoliaUrl = alchemyApiKey ? `https://base-sepolia.g.alchemy.com/v2/${alchemyApiKey}` : null
+  
+  const primaryRpcUrl = process.env.NEXT_PUBLIC_RPC_URL || (isMainnetChain ? "https://mainnet.base.org" : "https://sepolia.base.org")
+  const fallbackRpcUrl = process.env.NEXT_PUBLIC_RPC_URL_ALT || (isMainnetChain ? "https://base-rpc.publicnode.com" : "https://base-sepolia-rpc.publicnode.com")
+  
+  const urls = []
+  if (isMainnetChain && alchemyMainnetUrl) {
+    urls.push(http(alchemyMainnetUrl, { timeout: 10000, retryCount: 1 }))
+  } else if (!isMainnetChain && alchemySepoliaUrl) {
+    urls.push(http(alchemySepoliaUrl, { timeout: 10000, retryCount: 1 }))
+  }
+  urls.push(
+    http(primaryRpcUrl, { timeout: 10000, retryCount: 1 }),
+    http(fallbackRpcUrl, { timeout: 10000, retryCount: 1 })
+  )
+  
+  return fallback(urls)
+}
+
 // Alternative: Use a public NFT API service
 // Options: Alchemy (free tier), Moralis, OpenSea API, etc.
 
@@ -113,11 +144,10 @@ export async function getOwnedNFTs(
       try {
         const { createPublicClient } = await import("viem")
         const { base, baseSepolia } = await import("viem/chains")
-        const { config } = await import("./config")
         
         const selectedChain = isMainnet ? base : baseSepolia
-        // Use the wagmi config's transport (which includes Alchemy as primary)
-        const transport = config.transports[selectedChain.id]
+        // Create transport with same logic as config.ts (Alchemy as primary)
+        const transport = await createTransport(selectedChain.id)
         
         const publicClient = createPublicClient({
           chain: selectedChain,
@@ -182,27 +212,36 @@ export async function getOwnedNFTs(
     if (ALCHEMY_API_KEY) {
       const url = `https://${ALCHEMY_NETWORK}.g.alchemy.com/nft/v3/${ALCHEMY_API_KEY}/getNFTs?owner=${ownerAddress}&contractAddresses[]=${contractAddress}&withMetadata=true`
       console.log(`🔑 Using Alchemy API (${ALCHEMY_NETWORK})...`)
+      console.log(`🔑 Alchemy API key (first 10 chars): ${ALCHEMY_API_KEY.substring(0, 10)}...`)
+      console.log(`🔑 Contract address: ${contractAddress}`)
       
-      const response = await fetch(url)
-      if (response.ok) {
-        const data = await response.json()
-        console.log("📦 Alchemy API response:", data)
-        const nfts: OwnedNFT[] = (data.ownedNfts || []).map((nft: any) => ({
-          tokenId: nft.tokenId,
-          tokenUri: nft.tokenUri?.raw || nft.tokenUri?.gateway,
-          metadata: nft.metadata,
-        }))
-        
-        // Cache the result
-        localStorage.setItem(cacheKey, JSON.stringify({
-          data: nfts,
-          timestamp: Date.now(),
-        }))
-        
-        console.log(`✅ Found ${nfts.length} NFT(s) via Alchemy API`)
-        return nfts
-      } else {
-        console.error("❌ Alchemy API error:", response.status, response.statusText)
+      try {
+        const response = await fetch(url)
+        if (response.ok) {
+          const data = await response.json()
+          console.log("📦 Alchemy API response:", data)
+          const nfts: OwnedNFT[] = (data.ownedNfts || []).map((nft: any) => ({
+            tokenId: nft.tokenId,
+            tokenUri: nft.tokenUri?.raw || nft.tokenUri?.gateway,
+            metadata: nft.metadata,
+          }))
+          
+          // Cache the result
+          localStorage.setItem(cacheKey, JSON.stringify({
+            data: nfts,
+            timestamp: Date.now(),
+          }))
+          
+          console.log(`✅ Found ${nfts.length} NFT(s) via Alchemy API`)
+          return nfts
+        } else {
+          const errorText = await response.text()
+          console.error(`❌ Alchemy API error (${response.status}):`, errorText)
+          // Continue to fallback methods
+        }
+      } catch (error) {
+        console.error("❌ Alchemy API fetch error:", error)
+        // Continue to fallback methods
       }
     } else {
       console.log("⚠️ No Alchemy API key found, trying Transfer events...")
@@ -216,12 +255,11 @@ export async function getOwnedNFTs(
       // Use viem to query Transfer events
       const { createPublicClient, parseAbiItem } = await import("viem")
       const { base, baseSepolia } = await import("viem/chains")
-      const { config } = await import("./config")
       
       const selectedChain = isMainnet ? base : baseSepolia
-      // Use the wagmi config's transport (which includes Alchemy as primary)
-      const transport = config.transports[selectedChain.id]
-      console.log(`🔗 Using wagmi config transport for ${selectedChain.name}...`)
+      // Create transport with same logic as config.ts (Alchemy as primary)
+      const transport = await createTransport(selectedChain.id)
+      console.log(`🔗 Using transport for ${selectedChain.name} (Alchemy primary if available)...`)
       
       const publicClient = createPublicClient({
         chain: selectedChain,
@@ -305,11 +343,10 @@ export async function getOwnedNFTs(
     try {
       const { createPublicClient } = await import("viem")
       const { base, baseSepolia } = await import("viem/chains")
-      const { config } = await import("./config")
       
       const selectedChain = isMainnet ? base : baseSepolia
-      // Use the wagmi config's transport (which includes Alchemy as primary)
-      const transport = config.transports[selectedChain.id]
+      // Create transport with same logic as config.ts (Alchemy as primary)
+      const transport = await createTransport(selectedChain.id)
       
       const publicClient = createPublicClient({
         chain: selectedChain,
